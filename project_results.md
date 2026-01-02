@@ -80,9 +80,10 @@ Tmux allows us to inject keystrokes into the terminal session from an external p
 - `self_command.ts`: Main MCP server implementation. Validates the request and spawns `delayed_submit.js` as a detached process.
 - `delayed_submit.ts`: Worker script that handles the 3-second delay and tmux command injection. It runs independently of the MCP server to ensure execution persistence.
 - `self_command.test.ts`: Comprehensive unit tests using Vitest and mocks.
+- `gemini_tmux.sh`: Helper script to launch and manage the `gemini-cli` tmux session.
 
 ## Usage Instructions
-1.  Start a tmux session: `tmux new -s gemini-cli`
-2.  Ensure Gemini is running.
+1.  Run `./gemini_tmux.sh` to start or attach to the `gemini-cli` session.
+2.  Ensure Gemini is running inside that session.
 3.  Configure Gemini to use this MCP server.
 4.  Invoke the tool via natural language or direct call.
