@@ -14,16 +14,20 @@ import {
   type Mock,
 } from 'vitest';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { execSync } from 'child_process';
+import { execSync, spawn } from 'child_process';
+import path from 'path';
 
-// Mock the MCP server and transport
-const mockRegisterTool = vi.fn();
-const mockConnect = vi.fn();
+// Hoist mocks to ensure they are available for vi.mock
+const mocks = vi.hoisted(() => ({
+  registerTool: vi.fn(),
+  connect: vi.fn(),
+  spawn: vi.fn().mockReturnValue({ unref: vi.fn() }),
+}));
 
 vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
   McpServer: vi.fn().mockImplementation(() => ({
-    registerTool: mockRegisterTool,
-    connect: mockConnect,
+    registerTool: mocks.registerTool,
+    connect: mocks.connect,
   })),
 }));
 
@@ -34,6 +38,7 @@ vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => ({
 // Mock child_process
 vi.mock('child_process', () => ({
   execSync: vi.fn(),
+  spawn: mocks.spawn,
 }));
 
 describe('self_command MCP Server', () => {
@@ -44,7 +49,7 @@ describe('self_command MCP Server', () => {
     vi.useFakeTimers();
     // Dynamically import to trigger tool registration
     await import('./self_command.js');
-    toolFn = (mockRegisterTool as Mock).mock.calls[0][2];
+    toolFn = (mocks.registerTool as Mock).mock.calls[0][2];
   });
 
   afterEach(() => {
@@ -53,7 +58,7 @@ describe('self_command MCP Server', () => {
   });
 
   it('should register the "self_command" tool', () => {
-    expect(mockRegisterTool).toHaveBeenCalledWith(
+    expect(mocks.registerTool).toHaveBeenCalledWith(
       'self_command',
       expect.objectContaining({
         description: expect.stringContaining('Sends a command to the Gemini CLI itself'),
@@ -73,42 +78,26 @@ describe('self_command MCP Server', () => {
     expect(result.content[0].text).toContain("Error: Not running inside tmux session 'gemini-cli'");
   });
 
-  it('should return immediately and schedule the command', async () => {
+  it('should return immediately and spawn the worker process', async () => {
     (execSync as Mock).mockReturnValue(Buffer.from('')); // has-session succeeds
 
-    const result = await toolFn({ command: 'echo hello' });
+    const command = 'echo hello';
+    const result = await toolFn({ command });
 
     expect(result.content[0].text).toContain('Will execute "echo hello" in ~3 seconds');
-    
-    // At this point, no tmux send-keys should have happened (only has-session)
-    const callsBeforeDelay = (execSync as Mock).mock.calls.map(c => c[0]);
-    expect(callsBeforeDelay.some((cmd: string) => cmd.includes('send-keys'))).toBe(false);
-  });
 
-  it('should execute the command after delay', async () => {
-    (execSync as Mock).mockReturnValue(Buffer.from('')); 
+    // Verify spawn was called
+    expect(mocks.spawn).toHaveBeenCalledWith(
+        process.execPath,
+        expect.arrayContaining([expect.stringContaining('delayed_submit.js'), Buffer.from(command).toString('base64')]),
+        expect.objectContaining({
+            detached: true,
+            stdio: 'ignore',
+            cwd: expect.any(String)
+        })
+    );
     
-    await toolFn({ command: 'hello' });
-
-    // Fast-forward past the 3s initial delay and typing delays
-    await vi.runAllTimersAsync();
-
-    // Verify commands were sent
-    const allCalls = (execSync as Mock).mock.calls.map(c => c[0]);
-    const sendKeyCalls = allCalls.filter((cmd: string) => cmd.includes('send-keys'));
-    
-    // Should have calls for Escape, C-u, 'h', 'e', 'l', 'l', 'o', Enter
-    expect(sendKeyCalls.length).toBeGreaterThan(5);
-    
-    const typedChars = sendKeyCalls
-    .filter((call: string) => call.includes("tmux send-keys -t gemini-cli:0.0 '"))
-    .map((call: string) => {
-      const match = call.match(/'(.*)'$/);
-      return match ? match[1] : '';
-    })
-    .join('')
-    .replace(/'\''/g, "'");
-
-    expect(typedChars).toBe('hello');
+    // Verify unref was called on the child process
+    expect(mocks.spawn.mock.results[0].value.unref).toHaveBeenCalled();
   });
 });

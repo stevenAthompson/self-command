@@ -7,8 +7,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { execSync } from 'child_process';
-import { promisify } from 'util';
+import { execSync, spawn } from 'child_process';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const SESSION_NAME = 'gemini-cli';
 
@@ -25,50 +26,15 @@ function isInsideTmuxSession(): boolean {
   }
 }
 
-/**
- * Sends a message back to the gemini-cli tmux session.
- * @param message The message to send.
- */
 const server = new McpServer({
   name: 'self-command-server',
   version: '1.0.0',
 });
 
-/**
- * Executes the delay and tmux interaction in the background.
- * @param command The command to inject into the tmux session.
- */
-async function sendCommandDelayed(command: string) {
-  const target = `${SESSION_NAME}:0.0`;
-  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-  console.error(`[Background] Waiting 3 seconds before sending command: "${command}"`);
-  await delay(3000);
-
-  try {
-    // 1. Reset state: Send Escape and Ctrl-u to clear any existing input
-    execSync(`tmux send-keys -t ${target} Escape`);
-    await delay(100);
-    execSync(`tmux send-keys -t ${target} C-u`);
-    await delay(200);
-
-    // 2. Type the message character by character (slow-typing technique)
-    for (const char of command) {
-      // Escape special characters for shell/tmux
-      const escapedChar = char === "'" ? "'\\''" : char;
-      execSync(`tmux send-keys -t ${target} '${escapedChar}'`);
-      await delay(20);
-    }
-
-    // 3. Submit with Enter
-    await delay(500);
-    execSync(`tmux send-keys -t ${target} Enter`);
-    console.error(`[Background] Command sent: "${command}"`);
-
-  } catch (error) {
-    console.error(`[Background] Failed to send self-command via tmux: ${error}`);
-  }
-}
+// Resolve the path to the worker script
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const WORKER_SCRIPT = path.join(__dirname, 'delayed_submit.js');
 
 server.registerTool(
   'self_command',
@@ -92,11 +58,29 @@ server.registerTool(
       };
     }
 
-    // Trigger the delayed command execution WITHOUT awaiting it
-    // This allows the tool to return immediately
-    sendCommandDelayed(command).catch(err => {
-      console.error(`[Background] Unhandled error in sendCommandDelayed: ${err}`);
-    });
+    // Spawn the worker script detached
+    // We encode the command to base64 to avoid argument parsing issues
+    const encodedCommand = Buffer.from(command).toString('base64');
+    
+    try {
+      const subprocess = spawn(process.execPath, [WORKER_SCRIPT, encodedCommand], {
+        detached: true,
+        stdio: 'ignore', // Ignore stdio to allow parent to exit
+        cwd: __dirname
+      });
+
+      subprocess.unref(); // Allow the parent process to exit independently
+    } catch (err) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Failed to schedule command execution: ${err}`, 
+          },
+        ],
+        isError: true,
+      };
+    }
 
     return {
       content: [

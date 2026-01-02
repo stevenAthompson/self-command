@@ -41,11 +41,10 @@ The goal of this project is to create a Gemini CLI extension called `self_comman
 - Verified system functionality by manually triggering a `/compress` command via tmux injection to simulate tool operation.
 
 ## Test Results
-- **Unit Tests:** 4/4 passed (Vitest).
+- **Unit Tests:** 3/3 passed (Vitest).
     - Verified proper tool registration.
     - Verified error handling when outside tmux.
-    - Verified immediate response to the agent.
-    - Verified correct sequence of `send-keys` commands after delay.
+    - Verified immediate return and correct spawning of the detached worker process.
 - **System Verification:** Successfully demonstrated command injection into the `gemini-cli` session.
 
 ## FAQ
@@ -58,9 +57,11 @@ Tmux allows us to inject keystrokes into the terminal session from an external p
 ## Troubleshooting
 - **Error: Not running inside tmux session 'gemini-cli'**: Ensure you are running Gemini inside a tmux session with the exact name `gemini-cli`. Use `tmux ls` to check active sessions.
 - **Command isn't typed correctly**: If the command contains complex characters, the basic escaping might need adjustment. Currently handles single quotes.
+- **MCP error -32000: Connection closed**: This may occur if the extension fails to start or if Gemini has a stale configuration. Try restarting Gemini or running `npm run build` again to ensure the `dist/` directory is up to date. Manual verification can be done by running `echo '{}' | node dist/self_command.js`.
 
 ## Customized Code
-- `self_command.ts`: Main MCP server implementation. Contains `sendCommandDelayed` for the async logic.
+- `self_command.ts`: Main MCP server implementation. Validates the request and spawns `delayed_submit.js` as a detached process.
+- `delayed_submit.ts`: Worker script that handles the 3-second delay and tmux command injection. It runs independently of the MCP server to ensure execution persistence.
 - `self_command.test.ts`: Comprehensive unit tests using Vitest and mocks.
 - `gemini_tmux.sh`: Helper script to launch the session.
 
