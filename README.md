@@ -38,9 +38,9 @@ gemini extensions install https://github.com/stevenAthompson/self-command
 
 ## Usage
 
-1.  Start the tmux session using the helper script:
+1.  Start a tmux session named `gemini-cli`:
     ```bash
-    ./gemini_tmux.sh
+    tmux new -s gemini-cli
     ```
 2.  Inside the session, start Gemini (if not already started).
 3.  Load this MCP server into Gemini (configuration depends on your MCP client setup).
