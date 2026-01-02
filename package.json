@@ -2,6 +2,7 @@
   "name": "run-long-command",
   "version": "1.0.0",
   "description": "Gemini CLI Extension for running long commands",
+  "license": "MIT",
   "type": "module",
   "main": "run_long_command.js",
   "scripts": {

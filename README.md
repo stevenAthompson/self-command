@@ -65,4 +65,4 @@ npm test
 - `run_long_command.test.ts`: Unit tests.
 
 ## License
-Apache-2.0
+MIT
