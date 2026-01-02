@@ -40,6 +40,9 @@ The `self_command` project provides a Gemini CLI extension that allows the agent
 -   **Build:** `npm run build` generates a clean `dist/` directory with all necessary artifacts.
 -   **Path Check:** No hardcoded absolute paths remain in the source or manifest.
 
+## Recent Changes (2026-01-02)
+- Fixed an installation issue where `npm install` would fail if development dependencies were missing, causing the extension to appear installed but be missing its files. The `prepare` script was removed to rely on the pre-built `dist/` artifacts.
+
 ## FAQ & Troubleshooting
 
 ### Common Issues
