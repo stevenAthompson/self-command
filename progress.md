@@ -18,3 +18,10 @@
 - Pushed code to remote.
 - Updated README with standard installation command.
 - Updated LICENSE to MIT (Steven Thompson) and added License section to README.
+
+## Phase 4: Cleanup & Finalization
+- Renamed MCP server and tools from `runLongCommand` to `selfCommand` in `gemini-extension.json`.
+- Verified `package.json` naming and configuration.
+- Verified `self_command.ts` and tests align with the new project identity.
+- Cleaned up references to the base project in configuration files.
+- Verified build and tests pass.

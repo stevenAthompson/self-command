@@ -34,6 +34,11 @@ The goal of this project is to create a Gemini CLI extension called `self_comman
 - Pushed all code to the repository.
 - Updated documentation with installation instructions and MIT license details.
 
+### Phase 4: Cleanup & Finalization
+- Corrected MCP server naming in `gemini-extension.json` from `runLongCommand` to `selfCommand` to match the project identity.
+- Verified and cleaned up any lingering references to the base `run_long_command` project.
+- Confirmed build integrity and test passage after configuration updates.
+
 ## Test Results
 - **Unit Tests:** 4/4 passed (Vitest).
     - Verified proper tool registration.
