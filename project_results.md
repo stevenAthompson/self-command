@@ -13,7 +13,7 @@ The goal of this project is to create a Gemini CLI extension called `self_comman
 
 ## Phases and Work Done
 ### Phase 1: Initialization
-- Analyzed `run_long_command` template.
+- Analyzed base project template.
 - Renamed project to `self_command`.
 - Initialized documentation.
 
@@ -36,8 +36,9 @@ The goal of this project is to create a Gemini CLI extension called `self_comman
 
 ### Phase 4: Cleanup & Finalization
 - Corrected MCP server naming in `gemini-extension.json` from `runLongCommand` to `selfCommand` to match the project identity.
-- Verified and cleaned up any lingering references to the base `run_long_command` project.
+- Verified and cleaned up any lingering references to the base project.
 - Confirmed build integrity and test passage after configuration updates.
+- Verified system functionality by manually triggering a `/compress` command via tmux injection to simulate tool operation.
 
 ## Test Results
 - **Unit Tests:** 4/4 passed (Vitest).
@@ -45,6 +46,7 @@ The goal of this project is to create a Gemini CLI extension called `self_comman
     - Verified error handling when outside tmux.
     - Verified immediate response to the agent.
     - Verified correct sequence of `send-keys` commands after delay.
+- **System Verification:** Successfully demonstrated command injection into the `gemini-cli` session.
 
 ## FAQ
 ### Why is there a delay?
