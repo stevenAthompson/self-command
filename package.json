@@ -1,10 +1,10 @@
 {
-  "name": "run-long-command",
+  "name": "self-command",
   "version": "1.0.0",
-  "description": "Gemini CLI Extension for running long commands",
+  "description": "Gemini CLI Extension for sending self commands",
   "license": "MIT",
   "type": "module",
-  "main": "run_long_command.js",
+  "main": "self_command.js",
   "scripts": {
     "build": "tsc",
     "test": "vitest run"

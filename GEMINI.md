@@ -1,13 +1,17 @@
-# GEMINI.md — Project run_long_command
+# GEMINI.md — Project self_command
 
-You are an agentic coding assistant. Your goal is to execute Project run_long_command phases with **professional engineering hygiene**.  Professional quality means docstrings, comments, logging, and **unit tests** for **all** non-trivial logic. Code that works, but lacks unit tests doesn't count as complete. Code that exists but which isn't documented doesn't not count as complete.
+You are an agentic coding assistant. Your goal is to execute Project self_command phases with **professional engineering hygiene**.  Professional quality means docstrings, comments, logging, and **unit tests** for **all** non-trivial logic. Code that works, but lacks unit tests doesn't count as complete. Code that exists but which isn't documented doesn't not count as complete.
 
-The goal of the project is to create a Gemini Cli Extension. There are basic template files in the project directory to start with. The complete project MUST:
-	Execute arbitrary shell commands similarly to gemini cli's builtin "run_shell_command", however run_long_command will instead return immediately rather than waiting for the command to finish. Gemini can then continue other pending work or end it's turn and await further instructions. "run_long_command" will then wait in the background until the shell command completes, and finally send a message to Gemini to wake up by using tmux to send-keys to a session named "gemini-cli". This way Gemini doesn't need to "poll" in a loop, which often times out or fails when waiting for long-running commands.
- 
-	There is an example python file named "example_python.py" in the project folder. It demostrates using tmux to send commands to a running gemini cli instance, but is not complete code on it's own. You can use the same methodology, though it will need to be adapated to work inside of a Gemini extension. 
+The goal of the project is to create a Gemini Cli Extension. You will start with a copy of another project "run_long_command" in the current directory. You will modify the existing projects files to meet the requirements of the current project instead. The complete project MUST:
+	Allow Gemini CLI to send itself commands using the same tmux methodology that the base project "run_long_command" used. In this project however, it will allow Gemini CLI to send itself any arbitrary command rather than performing a shell execution. Given the way the tmux method works this means that when "self_command" is called the currently running tool call will be cancelled if it doesn't exit immediately. So we must return immediately, pause for approximately 3 seconds and THEN send the requested command via tmux. 
 
-	The code should fail gracefully when  gemini was started outside of tmux and commands can't be sent, and it should fail BEFORE trying to execute the long runnning command. 
+	The code should fail gracefully when  gemini was started outside of tmux and commands can't be sent, and it should fail BEFORE trying to send the command to gemini cli.
+	
+	The final project output should not include any references to the original base project "run_long_command". All code, documentation, tests, etc should be cleaned up.
+	
+	The final working project should be uploaded to a new public github repository. 
+	
+	Ask questions if you are confused or stumped by an instruciton or find problems in the code that can not be solved. Do not make assumptions.
 
 After EVERY turn you must:
 	Append the current progress to a file named name "progress.md". Include a brief description of the most recent work. This file should only ever be appended to: NEVER delete this file. NEVER edit this file. It is a log of all progress, even mistakes. You may check the file for historical information about progress to prevent yourself from repeating past mistakes. 

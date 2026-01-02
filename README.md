@@ -1,76 +1,45 @@
-# Gemini CLI Extension: Run Long Command
+# Gemini CLI Self-Command Extension
 
-A Gemini CLI extension that enables the execution of long-running shell commands in the background without blocking the agent. It utilizes `tmux` to notify the agent upon command completion.
+An MCP tool that allows the Gemini CLI to send commands to itself via tmux.
 
-## Features
+## Purpose
 
-- **Asynchronous Execution:** Run commands like `sleep`, builds, or long scripts without timing out the Gemini CLI.
-- **Auto-Notification:** "Wakes up" the Gemini agent using `tmux send-keys` when the background task finishes.
-- **Fail-Safe:** Checks for the required `tmux` session environment before execution.
+This extension enables the Gemini agent to execute CLI commands "on itself" by injecting them into its own input stream. This is useful for self-correction, navigation, or triggering other CLI features programmatically.
+
+## How it Works
+
+1.  **Immediate Return:** The tool acknowledges the request and returns immediately to avoid blocking the agent.
+2.  **Delay:** It waits for approximately 3 seconds to ensure the previous operation clears.
+3.  **Tmux Injection:** It uses `tmux send-keys` to simulate user input in the `gemini-cli` session.
 
 ## Prerequisites
 
-- **Gemini CLI**
-- **tmux**: Required for session management and notifications.
-- **Node.js**: Environment for running the extension.
+-   **Tmux:** You must run the Gemini CLI inside a tmux session named `gemini-cli`.
+-   **Node.js:** Required to run the MCP server.
 
 ## Installation
 
-### Via Gemini CLI (Recommended)
-You can install this extension directly using the Gemini CLI:
-
-```bash
-gemini extensions install https://github.com/stevenAthompson/run-long-command
-```
-
-### Manual Installation (For Development)
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/stevenAthompson/run-long-command
-    cd run-long-command
-    ```
-
-2.  **Install dependencies:**
+1.  Clone this repository.
+2.  Install dependencies:
     ```bash
     npm install
     ```
-
-3.  **Build the project:**
+3.  Build the project:
     ```bash
     npm run build
     ```
 
 ## Usage
 
-### 1. Start the Tmux Session
-The extension requires running inside a `tmux` session named `gemini-cli`. A helper script is provided:
-
-```bash
-./gemini_tmux.sh
-```
-*This will check for the session and create/attach to it as needed.*
-
-### 2. Run Gemini CLI
-Inside the tmux session, start your Gemini CLI agent.
-
-### 3. Use the Tool
-You can now ask Gemini to run long commands:
-
-> "Run `sleep 10` in the background."
-
-Gemini will use the `run_long_command` tool, return immediately to let you know it started, and then receive a notification (and wake up) when the command finishes.
+1.  Start the tmux session using the helper script:
+    ```bash
+    ./gemini_tmux.sh
+    ```
+2.  Inside the session, start Gemini (if not already started).
+3.  Load this MCP server into Gemini (configuration depends on your MCP client setup).
+4.  Ask Gemini to run a command on itself, e.g., "Run the 'help' command on yourself".
 
 ## Development
 
-### Running Tests
-```bash
-npm test
-```
-
-### Project Structure
-- `run_long_command.ts`: Main MCP server implementation.
-- `gemini_tmux.sh`: Setup script for the tmux environment.
-- `run_long_command.test.ts`: Unit tests.
-
-## License
-MIT
+-   **Test:** `npm test`
+-   **Build:** `npm run build`
