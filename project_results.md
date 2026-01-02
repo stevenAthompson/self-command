@@ -62,9 +62,10 @@ Tmux allows us to inject keystrokes into the terminal session from an external p
 ## Customized Code
 - `self_command.ts`: Main MCP server implementation. Contains `sendCommandDelayed` for the async logic.
 - `self_command.test.ts`: Comprehensive unit tests using Vitest and mocks.
+- `gemini_tmux.sh`: Helper script to launch the session.
 
 ## Usage Instructions
-1.  Start a tmux session named `gemini-cli`: `tmux new -s gemini-cli`.
+1.  Run `./gemini_tmux.sh` to start/attach to the session.
 2.  Ensure Gemini is running.
 3.  Configure Gemini to use this MCP server.
 4.  Invoke the tool via natural language or direct call.
