@@ -4,7 +4,7 @@
   "description": "Gemini CLI Extension for sending self commands",
   "license": "MIT",
   "type": "module",
-  "main": "self_command.js",
+  "main": "dist/self_command.js",
   "scripts": {
     "build": "tsc",
     "test": "vitest run"
