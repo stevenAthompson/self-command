@@ -19,6 +19,13 @@ This extension enables the Gemini agent to execute CLI commands "on itself" by i
 
 ## Installation
 
+### Standard Installation (Recommended)
+You can install this extension directly via the Gemini CLI:
+```bash
+gemini extensions install https://github.com/stevenAthompson/self-command
+```
+
+### Manual Installation
 1.  Clone this repository.
 2.  Install dependencies:
     ```bash

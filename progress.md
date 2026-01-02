@@ -16,3 +16,4 @@
 ## Phase 3: Deployment
 - Created GitHub repository `self-command`.
 - Pushed code to remote.
+- Updated README with standard installation command.
