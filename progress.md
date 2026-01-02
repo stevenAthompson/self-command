@@ -12,3 +12,7 @@
 - Wrote and passed 4 unit tests covering all scenarios.
 - Updated `README.md` and `project_results.md`.
 - Successfully built the project.
+
+## Phase 3: Deployment
+- Created GitHub repository `self-command`.
+- Pushed code to remote.
