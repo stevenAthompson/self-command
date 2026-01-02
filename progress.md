@@ -17,3 +17,4 @@
 - Created GitHub repository `self-command`.
 - Pushed code to remote.
 - Updated README with standard installation command.
+- Updated LICENSE to MIT (Steven Thompson) and added License section to README.

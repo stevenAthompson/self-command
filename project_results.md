@@ -32,6 +32,7 @@ The goal of this project is to create a Gemini CLI extension called `self_comman
 ### Phase 3: Deployment
 - Created public GitHub repository: https://github.com/stevenAthompson/self-command
 - Pushed all code to the repository.
+- Updated documentation with installation instructions and MIT license details.
 
 ## Test Results
 - **Unit Tests:** 4/4 passed (Vitest).
