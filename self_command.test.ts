@@ -43,10 +43,12 @@ vi.mock('child_process', () => ({
 
 describe('self_command MCP Server', () => {
   let toolFn: Function;
+  const ORIGINAL_ENV = process.env;
 
   beforeEach(async () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    process.env = { ...ORIGINAL_ENV }; // Clone env
     // Dynamically import to trigger tool registration
     await import('./self_command.js');
     toolFn = (mocks.registerTool as Mock).mock.calls[0][2];
@@ -55,6 +57,7 @@ describe('self_command MCP Server', () => {
   afterEach(() => {
     vi.resetModules();
     vi.useRealTimers();
+    process.env = ORIGINAL_ENV; // Restore env
   });
 
   it('should register the "self_command" tool', () => {
@@ -67,19 +70,26 @@ describe('self_command MCP Server', () => {
     );
   });
 
-  it('should fail if not in the correct tmux session', async () => {
-    (execSync as Mock).mockImplementation(() => {
-      throw new Error('session not found');
-    });
+  it('should fail if TMUX env var is missing', async () => {
+    delete process.env.TMUX;
+    const result = await toolFn({ command: 'help' });
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain("Error: Not running inside tmux session");
+  });
+
+  it('should fail if tmux session name does not match', async () => {
+    process.env.TMUX = '/tmp/tmux-1000/default,1234,0';
+    (execSync as Mock).mockReturnValue('other-session\n');
 
     const result = await toolFn({ command: 'help' });
 
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain("Error: Not running inside tmux session 'gemini-cli'");
+    expect(result.content[0].text).toContain("Error: Not running inside tmux session");
   });
 
   it('should return immediately and spawn the worker process', async () => {
-    (execSync as Mock).mockReturnValue(Buffer.from('')); // has-session succeeds
+    process.env.TMUX = '/tmp/tmux-1000/default,1234,0';
+    (execSync as Mock).mockReturnValue('gemini-cli\n');
 
     const command = 'echo hello';
     const result = await toolFn({ command });

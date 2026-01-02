@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "mcpServers": {
     "selfCommand": {
-      "command": "/usr/bin/node",
+      "command": "node",
       "args": ["${extensionPath}${/}dist${/}self_command.js"],
       "cwd": "${extensionPath}"
     }

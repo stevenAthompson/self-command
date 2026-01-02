@@ -11,17 +11,24 @@ import { execSync, spawn } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-const SESSION_NAME = 'gemini-cli';
+const SESSION_NAME = process.env.GEMINI_TMUX_SESSION_NAME || 'gemini-cli';
 
 /**
  * Checks if the current environment is running inside the 'gemini-cli' tmux session.
- * @returns {boolean} True if the session exists, false otherwise.
+ * @returns {boolean} True if the session exists and we are inside it, false otherwise.
  */
 function isInsideTmuxSession(): boolean {
+  // 1. Check if the TMUX environment variable is set (indicates we are in a tmux client)
+  if (!process.env.TMUX) {
+    return false;
+  }
+
   try {
-    execSync(`tmux has-session -t ${SESSION_NAME}`, { stdio: 'ignore' });
-    return true;
+    // 2. Query tmux for the current session name
+    const currentSessionName = execSync('tmux display-message -p "#S"', { encoding: 'utf-8' }).trim();
+    return currentSessionName === SESSION_NAME;
   } catch (error) {
+    // If tmux command fails, assume not in a valid session
     return false;
   }
 }

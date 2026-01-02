@@ -1,15 +1,14 @@
-## [2026-01-02] GitHub Release Preparation
-- Updated documentation with installation instructions for `gemini extensions install`.
-- Verified build and tests.
-- Pushed changes to GitHub.
-## [Fri Jan  2 02:39:52 PM EST 2026] Phase 2: Debugging and Cleanup
-- Diagnosed MCP error -32000 (Connection closed) as likely due to path/environment issues.
-- Verified server manually handles JSON-RPC handshake correctly (no immediate crash).
-- Updated 'gemini-extension.json' to use absolute path for node executable ('/usr/bin/node') to ensure reliable startup.
-- Removed leftover artifacts from base project: 'gemini_tmux.sh', 'example_python.py'.
-- Updated 'README.md' to remove references to deleted scripts.
-- Verified all unit tests pass.
-
-## [Fri Jan  2 02:40:48 PM EST 2026] Phase 2 (Correction): Restored gemini_tmux.sh
-- Restored 'gemini_tmux.sh' script as it is the required method for starting the session.
-- Updated 'README.md' and 'project_results.md' to re-include the script in instructions.
+## Final Polish and Portability Fixes
+- Fixed `gemini_tmux.sh`:
+    - Fixed bug where `CMD` was used before definition.
+    - Added `export GEMINI_TMUX_SESSION_NAME` to ensure child processes (like the MCP server) know which session to target.
+    - Improved existing session handling to always send the command if provided.
+- Fixed `gemini-extension.json`:
+    - Replaced hardcoded `/usr/bin/node` with `node`.
+- Verified Portability:
+    - All scripts now respect `GEMINI_TMUX_SESSION_NAME`.
+    - `self_command.ts` uses `process.execPath` and `__dirname` for locating the worker script.
+- Cleaned up references:
+    - Confirmed no "run_long_command" references in code, documentation, or results.
+- Verified Tests:
+    - All tests pass with the new strict session validation.

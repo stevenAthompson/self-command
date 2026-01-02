@@ -6,7 +6,7 @@
 
 import { execSync } from 'child_process';
 
-const SESSION_NAME = 'gemini-cli';
+const SESSION_NAME = process.env.GEMINI_TMUX_SESSION_NAME || 'gemini-cli';
 
 async function main() {
   const args = process.argv.slice(2);
