@@ -1,14 +1,4 @@
-## Final Polish and Portability Fixes
-- Fixed `gemini_tmux.sh`:
-    - Fixed bug where `CMD` was used before definition.
-    - Added `export GEMINI_TMUX_SESSION_NAME` to ensure child processes (like the MCP server) know which session to target.
-    - Improved existing session handling to always send the command if provided.
-- Fixed `gemini-extension.json`:
-    - Replaced hardcoded `/usr/bin/node` with `node`.
-- Verified Portability:
-    - All scripts now respect `GEMINI_TMUX_SESSION_NAME`.
-    - `self_command.ts` uses `process.execPath` and `__dirname` for locating the worker script.
-- Cleaned up references:
-    - Confirmed no "run_long_command" references in code, documentation, or results.
-- Verified Tests:
-    - All tests pass with the new strict session validation.
+## [2026-01-02] Build Artifacts & Git
+- Removed `dist/` from `.gitignore` to ensure pre-built artifacts are available in the repository.
+- Verified `npm run build` succeeds and populates `dist/`.
+- Updated `package.json` to include `prepare` script for local development convenience.

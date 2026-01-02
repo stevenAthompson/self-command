@@ -1,45 +1,18 @@
-#!/bin/bash
+#!/usr/bin/bash
 
-# Configuration
-SESSION_NAME="${GEMINI_TMUX_SESSION_NAME:-gemini-cli}"
-export GEMINI_TMUX_SESSION_NAME="$SESSION_NAME"
+SESSION_NAME="gemini-cli"
 
-# Determine command to run
-CMD="$@"
+# 1. Check if the session already exists
+tmux has-session -t $SESSION_NAME 2>/dev/null
 
-# Check if session already exists
-if tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
-  echo "Session '$SESSION_NAME' already exists."
+if [ $? != 0 ]; then
+  # 2. Create the session detached (-d) running the specific command
+  # Replace 'gemini chat start' with your actual command if different
+  tmux new-session -d -s $SESSION_NAME 'gemini'
   
-  if [ ! -z "$CMD" ]; then
-    echo "Sending command to existing session: $CMD"
-    tmux send-keys -t "$SESSION_NAME" "$CMD" C-m
-  fi
-  
-  echo "Attaching..."
-  tmux attach-session -t "$SESSION_NAME"
-  exit 0
+  # Optional: Set a larger history limit for long logs
+  tmux set-option -t $SESSION_NAME history-limit 10000
 fi
 
-if [ -z "$CMD" ]; then
-  echo "Usage: $0 <command_to_run>"
-  echo "Example: $0 gemini run my_instruction.md"
-  exit 1
-fi
-
-echo "Starting new tmux session: $SESSION_NAME"
-# Create a new session with a shell (so it doesn't close when cmd finishes)
-# -d: Detached
-# -s: Session name
-tmux new-session -d -s "$SESSION_NAME"
-
-# Wait a moment for shell to initialize
-sleep 0.5
-
-# Send the command to the session
-echo "Sending command: $CMD"
-tmux send-keys -t "$SESSION_NAME" "$CMD" C-m
-
-# Attach to the session
-echo "Attaching..."
-tmux attach-session -t "$SESSION_NAME"
+# 3. Attach to the session so you can see/use it manually
+tmux attach -t $SESSION_NAME
