@@ -16,9 +16,17 @@ A Gemini CLI extension that enables the execution of long-running shell commands
 
 ## Installation
 
+### Via Gemini CLI (Recommended)
+You can install this extension directly using the Gemini CLI:
+
+```bash
+gemini extensions install https://github.com/stevenAthompson/run-long-command
+```
+
+### Manual Installation (For Development)
 1.  **Clone the repository:**
     ```bash
-    git clone <repository-url>
+    git clone https://github.com/stevenAthompson/run-long-command
     cd run-long-command
     ```
 

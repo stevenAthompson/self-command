@@ -23,3 +23,6 @@
 - Confirmed 'sleep 20' completed successfully and triggered the tmux notification.
 - Real-time validation successful: Gemini was correctly 'woken up' by the background process completion message.
 
+## 2026-01-02 (Continued)
+- Updated README.md with Gemini CLI installation instructions.
+
