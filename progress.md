@@ -1,5 +1,4 @@
-- Refactored `self_command.ts` to use `spawn` with `detached: true` for the `delayed_submit.js` worker.
-- Created `delayed_submit.ts` to handle the actual tmux interaction in a separate process.
-- This ensures that the command injection survives the termination of the MCP server process (e.g., when the tool call completes).
-- Verified build success.
-- Fixed unit tests to mock `spawn` correctly and verify the detached worker process creation. Verified passing status (3/3 tests).
+## [2026-01-02] GitHub Release Preparation
+- Updated documentation with installation instructions for `gemini extensions install`.
+- Verified build and tests.
+- Pushed changes to GitHub.
