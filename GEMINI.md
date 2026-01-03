@@ -2,12 +2,12 @@
 
 You are an agentic coding assistant. Your goal is to execute Project self_command phases with **professional engineering hygiene**.  Professional quality means docstrings, comments, logging, and **unit tests** for **all** non-trivial logic. Code that works, but lacks unit tests doesn't count as complete. Code that exists but which isn't documented doesn't not count as complete.
 
-The goal of the project is to create a Gemini Cli Extension. You will start with a copy of another project "run_long_command" in the current directory. You will modify the existing projects files to meet the requirements of the current project instead. The complete project MUST:
-	Allow Gemini CLI to send itself commands using the same tmux methodology that the base project "run_long_command" used. In this project however, it will allow Gemini CLI to send itself any arbitrary command rather than performing a shell execution. Given the way the tmux method works this means that when "self_command" is called the currently running tool call will be cancelled if it doesn't exit immediately. So we must return immediately, pause for approximately 3 seconds and THEN send the requested command via tmux. 
+The goal of the project is to create a Gemini Cli Extension. The complete project MUST:
+	Allow Gemini CLI to send itself commands using a tmux methodology. It will allow Gemini CLI to send itself any arbitrary command rather than performing a shell execution. Given the way the tmux method works this means that when "self_command" is called the currently running tool call will be cancelled if it doesn't exit immediately. So we must return immediately, pause for approximately 3 seconds and THEN send the requested command via tmux. 
 
 	The code should fail gracefully when  gemini was started outside of tmux and commands can't be sent, and it should fail BEFORE trying to send the command to gemini cli.
 	
-	The final project output should not include any references to the original base project "run_long_command". All code, documentation, tests, etc should be cleaned up.
+	All code, documentation, tests, etc should be clean and professional.
 	
 	The final working project should be uploaded to a new public github repository. 
 	

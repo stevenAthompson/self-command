@@ -1,8 +1,5 @@
-## [2026-01-02] Build Artifacts & Git
-- Removed `dist/` from `.gitignore` to ensure pre-built artifacts are available in the repository.
-- Verified `npm run build` succeeds and populates `dist/`.
-- Updated `package.json` to include `prepare` script for local development convenience.
-
-## [2026-01-02] Fix Install Script
-- Removed `prepare` script from `package.json` to avoid build failures during `gemini extensions install` when devDependencies are missing.
-- Verified `dist/` is up to date.
+## [2026-01-02] Licensing and Release Preparation
+- Updated copyright headers in `self_command.ts`, `delayed_submit.ts`, and `self_command.test.ts` to "Steven A. Thompson".
+- Added author information to `package.json`.
+- Updated `.gitignore` to un-ignore `node_modules` and `package-lock.json` to include dependencies in the repository/release.
+- Ran `npm install` to ensure `package-lock.json` is up to date.
