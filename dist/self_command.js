@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2026 Google LLC
+ * Copyright 2026 Steven A. Thompson
  * SPDX-License-Identifier: MIT
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';

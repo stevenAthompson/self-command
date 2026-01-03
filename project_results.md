@@ -4,8 +4,8 @@
 The `self_command` project provides a Gemini CLI extension that allows the agent to send instructions to itself via a tmux session. This is achieved by injecting keys into the tmux pane where Gemini is running, using a delayed worker to ensure the current operation completes first.
 
 ## Status
-- **Current Phase:** Complete & Verified.
-- **End-to-End Verification:** Success. The `self_command` tool correctly queues and injects commands back into the Gemini CLI prompt.
+- **Current Phase:** Shipped (Release `55aa0fb`).
+- **End-to-End Verification:** Success. The `self_command` tool correctly queues and injects commands back into the Gemini CLI prompt. (Verified 2026-01-02).
 - **Portability:** Fully portable. Uses environment variables for configuration and relative paths for internal scripts.
 - **Code Quality:** Professional engineering hygiene followed with docstrings, logging, and unit tests.
 
@@ -14,14 +14,13 @@ The `self_command` project provides a Gemini CLI extension that allows the agent
 - **Safe Injection:** Uses a character-by-character injection method in `delayed_submit.js` to ensure commands are entered reliably into the CLI prompt.
 - **Graceful Failure:** The tool checks if it is running inside the correct tmux session *before* attempting to queue a command, providing clear error messages if not.
 - **Non-Blocking:** Returns immediately to the agent while the command is queued in a detached background process.
+- **Standalone Installation:** The repository includes all necessary `node_modules`, so no additional setup (like `npm install`) is required by the end user.
 
 ## Usage
 1.  **Install:**
     ```bash
     gemini extensions install https://github.com/stevenAthompson/self-command
     ```
-    *Note: The repository includes all necessary dependencies (`node_modules`), so no post-installation `npm install` is required.*
-
 2.  **Launch Gemini:**
     ```bash
     # Use the helper script to ensure the environment is set up correctly.
@@ -41,6 +40,7 @@ The `self_command` project provides a Gemini CLI extension that allows the agent
 ## Verification Results
 -   **Unit Tests:** `npm test` passes 100% (4/4 tests passed).
 -   **Build:** `npm run build` succeeds and generates the `dist/` directory.
+-   **End-to-End Test:** Successfully executed `self_command("hello world")` which was injected back into the CLI as expected.
 -   **Linting/Standards:** Code follows project conventions and includes necessary documentation.
 
 ## Customized Code Description
@@ -64,6 +64,7 @@ The `self_command` project provides a Gemini CLI extension that allows the agent
 4.  **Check logs:** If possible, check the terminal where Gemini is running for any injection artifacts.
 
 ## Recent Changes (2026-01-02)
+- **Verified integration:** Performed end-to-end testing of the `self_command` tool within a tmux session, confirming successful command injection.
 - **Licensing:** Updated all source files and metadata to reflect the author as **Steven A. Thompson**.
 - **Distribution:** Configured the project to include `node_modules` and `package-lock.json` in the repository. This ensures that end-users do not need to run `npm install` manually after installing the extension.
 - **Documentation:** Updated installation instructions to reflect the self-contained nature of the repository.

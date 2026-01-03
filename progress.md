@@ -1,5 +1,6 @@
-## [2026-01-02] Licensing and Release Preparation
-- Updated copyright headers in `self_command.ts`, `delayed_submit.ts`, and `self_command.test.ts` to "Steven A. Thompson".
-- Added author information to `package.json`.
-- Updated `.gitignore` to un-ignore `node_modules` and `package-lock.json` to include dependencies in the repository/release.
-- Ran `npm install` to ensure `package-lock.json` is up to date.
+
+## [2026-01-02] Release Shipped
+- Committed all changes including `node_modules`.
+- Pushed release `55aa0fb` to `origin master`.
+- Project is now fully released and ready for install via `gemini extensions install`.
+2026-01-02: Successfully verified self_command integration. The 'hello world' command was correctly sent via tmux and received by the CLI after the scheduled delay.
