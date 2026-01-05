@@ -46,7 +46,7 @@ const WORKER_SCRIPT = path.join(__dirname, 'delayed_submit.js');
 server.registerTool(
   'self_command',
   {
-    description: 'Sends a command to the Gemini CLI itself via tmux after a short delay. Returns immediately.',
+    description: 'Sends a command to the Gemini CLI via tmux. Returns immediately, waits for the command to execute and the session to stabilize, and then sends a completion notification.',
     inputSchema: z.object({
       command: z.string().describe('The command to send to Gemini (e.g., "help", "list files").'),
     }),

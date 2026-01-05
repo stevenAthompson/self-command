@@ -33,6 +33,49 @@ async function main() {
         // 3. Submit with Enter
         await delay(500);
         execSync(`tmux send-keys -t ${target} Enter`);
+        // 4. Monitor for completion
+        // We poll the pane content. If it remains unchanged for stableCount checks, we assume it's done.
+        let lastContent = '';
+        let stableChecks = 0;
+        const POLLING_INTERVAL = 1000; // Check every 1 second
+        const REQUIRED_STABLE_CHECKS = 3; // Wait for 3 seconds of stability (approx)
+        const MAX_WAIT_TIME = 300000; // 5 minutes max wait
+        const startTime = Date.now();
+        while (Date.now() - startTime < MAX_WAIT_TIME) {
+            await delay(POLLING_INTERVAL);
+            let currentContent = '';
+            try {
+                currentContent = execSync(`tmux capture-pane -p -t ${target}`, { encoding: 'utf-8' });
+            }
+            catch (e) {
+                // If capture fails, we retry
+                continue;
+            }
+            if (currentContent === lastContent) {
+                stableChecks++;
+            }
+            else {
+                stableChecks = 0;
+                lastContent = currentContent;
+            }
+            if (stableChecks >= REQUIRED_STABLE_CHECKS) {
+                break; // Content has been stable, assume command is done
+            }
+        }
+        // 5. Send notification
+        const notification = "[SYSTEM COMMAND] Command complete. Resume.";
+        // Clear input again just in case
+        execSync(`tmux send-keys -t ${target} Escape`);
+        await delay(100);
+        execSync(`tmux send-keys -t ${target} C-u`);
+        await delay(200);
+        for (const char of notification) {
+            const escapedChar = char === "'" ? "'\\''" : char;
+            execSync(`tmux send-keys -t ${target} '${escapedChar}'`);
+            await delay(20);
+        }
+        await delay(500);
+        execSync(`tmux send-keys -t ${target} Enter`);
     }
     catch (error) {
         // Silently fail or log to a file if needed, since we are detached

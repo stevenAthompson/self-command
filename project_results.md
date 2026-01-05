@@ -1,20 +1,21 @@
 # Project Results: Self Command Extension
 
 ## Overview
-The `self_command` project provides a Gemini CLI extension that allows the agent to send instructions to itself via a tmux session. This is achieved by injecting keys into the tmux pane where Gemini is running, using a delayed worker to ensure the current operation completes first.
+The `self_command` project provides a Gemini CLI extension that allows the agent to send instructions to itself via a tmux session. This is achieved by injecting keys into the tmux pane where Gemini is running. Crucially, the tool spawns a background worker that waits for the command to finish executing (by monitoring the terminal for inactivity) before notifying Gemini to resume.
 
 ## Status
-- **Current Phase:** Shipped (Release `55aa0fb`).
-- **End-to-End Verification:** Success. The `self_command` tool correctly queues and injects commands back into the Gemini CLI prompt. (Verified 2026-01-02).
-- **Portability:** Fully portable. Uses environment variables for configuration and relative paths for internal scripts.
+- **Current Phase:** Monitoring Implementation (2026-01-04).
+- **Functionality:** Injects Gemini commands, monitors the terminal for output stability (idle state), and then sends a completion signal.
+- **Portability:** Fully portable. Uses environment variables for configuration and relative paths.
 - **Code Quality:** Professional engineering hygiene followed with docstrings, logging, and unit tests.
 
 ## Key Features
 - **Configurable Session:** Use `GEMINI_TMUX_SESSION_NAME` to specify the target tmux session (defaults to `gemini-cli`).
-- **Safe Injection:** Uses a character-by-character injection method in `delayed_submit.js` to ensure commands are entered reliably into the CLI prompt.
-- **Graceful Failure:** The tool checks if it is running inside the correct tmux session *before* attempting to queue a command, providing clear error messages if not.
-- **Non-Blocking:** Returns immediately to the agent while the command is queued in a detached background process.
-- **Standalone Installation:** The repository includes all necessary `node_modules`, so no additional setup (like `npm install`) is required by the end user.
+- **Safe Injection:** Uses a character-by-character injection method in `delayed_submit.js` to ensure commands are entered reliably.
+- **Completion Monitoring:** The worker script polls the tmux pane content. If the content remains stable (unchanged) for 3 consecutive seconds, it assumes the command has finished.
+- **Resume Notification:** Sends `[SYSTEM COMMAND] Command complete. Resume.` to the agent once the command is done.
+- **Graceful Failure:** The tool checks if it is running inside the correct tmux session *before* attempting to queue a command.
+- **Non-Blocking:** Returns immediately to the agent while the command and monitoring run in a detached background process.
 
 ## Usage
 1.  **Install:**
@@ -23,53 +24,49 @@ The `self_command` project provides a Gemini CLI extension that allows the agent
     ```
 2.  **Launch Gemini:**
     ```bash
-    # Use the helper script to ensure the environment is set up correctly.
-    # This creates (if needed) and attaches to a tmux session named 'gemini-cli' running 'gemini'.
     ./gemini_tmux.sh
     ```
 3.  **Self-Command:**
     -   Within Gemini, use the `self_command` tool.
-    -   Example: `self_command(command="help")`
+    -   Example: `self_command(command="fetch_posts")`
+    -   The agent will receive a confirmation immediately.
+    -   The command executes.
+    -   When output stops streaming/printing, the agent receives: `[SYSTEM COMMAND] Command complete. Resume.`
 
 ## Implementation Details
--   `gemini_tmux.sh`: A wrapper script that creates or attaches to a tmux session named `gemini-cli`. It automatically launches the `gemini` command inside the session if creating it.
--   `self_command.ts`: The main MCP server. It validates the environment (checking the `TMUX` variable and session name) and spawns the detached worker.
--   `delayed_submit.ts`: A specialized worker script that waits for 3 seconds and then simulates keystrokes to enter the new command via tmux.
--   `gemini-extension.json`: Configured with `${extensionPath}` and `node` for maximum compatibility across different installation environments.
+-   `gemini_tmux.sh`: A wrapper script that creates or attaches to a tmux session named `gemini-cli`.
+-   `self_command.ts`: The main MCP server. Registers the `self_command` tool and spawns the detached worker.
+-   `delayed_submit.ts`: A specialized worker script that:
+    1. Waits 3 seconds.
+    2. Injects the command via `tmux send-keys`.
+    3. Enters a loop: `tmux capture-pane` every 1s.
+    4. If pane is stable for 3 checks, injects the resume notification.
+-   `gemini-extension.json`: Configured with `${extensionPath}` and `node`.
 
 ## Verification Results
 -   **Unit Tests:** `npm test` passes 100% (4/4 tests passed).
--   **Build:** `npm run build` succeeds and generates the `dist/` directory.
--   **End-to-End Test:** Successfully executed `self_command("hello world")` which was injected back into the CLI as expected.
--   **Linting/Standards:** Code follows project conventions and includes necessary documentation.
+-   **Build:** `npm run build` succeeds.
+-   **Stability Logic:** Uses a sliding window of stability checks (default 3 checks * 1 sec interval) with a max timeout of 5 minutes.
 
 ## Customized Code Description
--   `self_command.ts`: MCP server that registers the `self_command` tool. It performs pre-flight checks to ensure it's running in tmux.
--   `delayed_submit.ts`: Background worker that handles the 3-second delay and tmux key injection.
--   `gemini_tmux.sh`: Bash script to standardize the tmux environment for the extension.
+-   `self_command.ts`: MCP server that registers the `self_command` tool.
+-   `delayed_submit.ts`: Background worker that handles execution and monitoring.
+-   `gemini_tmux.sh`: Bash script to standardize the tmux environment.
 
 ## FAQ & Troubleshooting
 
 ### FAQ
-**Q: Why a 3-second delay?**
-**A: To ensure the agent has finished its current response and the CLI is ready for new input.**
+**Q: How does it know when a command is done?**
+**A: It looks for visual stability. If the terminal screen doesn't change for 3 seconds, it assumes the command has finished outputting.**
 
-**Q: Can I change the tmux session name?**
-**A: Yes, set the `GEMINI_TMUX_SESSION_NAME` environment variable.**
+**Q: What if the command has long pauses?**
+**A: The stability check might trigger prematurely. This is a heuristic approach suitable for typical REPL interactions.**
 
 ### Troubleshooting Steps
 1.  **Ensure you are in tmux:** Run `tmux ls` to see if `gemini-cli` exists.
 2.  **Check session name:** Use `./gemini_tmux.sh` to ensure you are in the expected session.
-3.  **Check build:** Run `npm run build` to ensure JavaScript files are up to date.
-4.  **Check logs:** If possible, check the terminal where Gemini is running for any injection artifacts.
+3.  **Check build:** Run `npm run build`.
 
-## Recent Changes (2026-01-02)
-- **Verified integration:** Performed end-to-end testing of the `self_command` tool within a tmux session, confirming successful command injection.
-- **Licensing:** Updated all source files and metadata to reflect the author as **Steven A. Thompson**.
-- **Distribution:** Configured the project to include `node_modules` and `package-lock.json` in the repository. This ensures that end-users do not need to run `npm install` manually after installing the extension.
-- **Documentation:** Updated installation instructions to reflect the self-contained nature of the repository.
-
-## Challenges Overcome
-- **Backgrounding in Node.js:** Used `spawn` with `detached: true` and `unref()` to ensure the worker process lives independently of the MCP server's response cycle.
-- **Tmux Key Injection:** Implemented a slow-typing technique to avoid overwhelming the CLI input buffer.
-- **Portability:** Ensured all paths are resolved dynamically using `import.meta.url` and `path.join`.
+## Recent Changes (2026-01-04)
+- **Monitoring Feature:** Updated `delayed_submit.ts` to include a polling loop that watches `tmux capture-pane`. This ensures the resume notification is sent only after the command's output has stabilized.
+- **Revert:** Reverted the previous attempt to run commands as shell sub-processes. We are strictly operating on the tmux session.
