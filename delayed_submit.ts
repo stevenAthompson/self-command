@@ -11,7 +11,6 @@ const SESSION_NAME = process.env.GEMINI_TMUX_SESSION_NAME || 'gemini-cli';
 async function main() {
   const args = process.argv.slice(2);
   if (args.length < 1) {
-    console.error('Usage: node delayed_submit.js <base64_encoded_command>');
     process.exit(1);
   }
 
@@ -21,7 +20,7 @@ async function main() {
   const target = `${SESSION_NAME}:0.0`;
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  // console.log(`[Detached] Waiting 3 seconds before sending command...`);
+  // Wait 3 seconds before starting to ensure the previous command has cleared
   await delay(3000);
 
   try {
@@ -93,8 +92,7 @@ async function main() {
     execSync(`tmux send-keys -t ${target} Enter`);
     
   } catch (error) {
-    // Silently fail or log to a file if needed, since we are detached
-    // console.error(`[Detached] Failed: ${error}`);
+    // Silently fail in detached mode
     process.exit(1);
   }
 }
