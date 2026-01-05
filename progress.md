@@ -13,3 +13,4 @@
 - Cleanup: Updated .gitignore to exclude node_modules and dist. Removed tracked build artifacts.
 - Correction: Removed node_modules and dist from .gitignore and added them back to git tracking. This is required for git-based installation.
 - SUCCESS: Verified self_command remains functional after restoring node_modules and dist to git tracking. Test command 'list files' successfully injected and resumed.
+- SUCCESS: Verified stability polling with 30-second sleep. Background worker correctly waited for command completion and terminal stability before sending Resume signal.
