@@ -1,16 +1,2 @@
-## [2026-01-04] Added Command Completion Monitoring
-- Reverted the pivot to shell execution (back to tmux command injection).
-- Modified `delayed_submit.ts` to monitor the tmux pane for stability (no changes for ~3 seconds) after sending a command.
-- Once stability is detected (implying command completion), a notification `[SYSTEM COMMAND] Command complete. Resume.` is sent to the Gemini CLI.
-- Updated `self_command.ts` description to reflect this monitoring capability.
-- Verified functionality via manual foreground execution which successfully targeted the running session.
-- Committed changes.## [2026-01-04] Corrected Link Command Guidance
-- User encountered an error when trying to link the extension using `gemini extensions install link .`.
-- Clarified that the correct command for local development is `gemini extensions link .`.
-- Verified that the `dist` directory is populated and all unit tests (4/4) pass.
-- Testing self_command with a 10-second sleep request to verify the tmux injection and stability monitoring.
-- SUCCESS: Completed end-to-end test of self_command. Verified command injection, execution of 'sleep 10', stability monitoring, and receipt of the resume notification.
-- Cleanup: Updated .gitignore to exclude node_modules and dist. Removed tracked build artifacts.
-- Correction: Removed node_modules and dist from .gitignore and added them back to git tracking. This is required for git-based installation.
-- SUCCESS: Verified self_command remains functional after restoring node_modules and dist to git tracking. Test command 'list files' successfully injected and resumed.
-- SUCCESS: Verified stability polling with 30-second sleep. Background worker correctly waited for command completion and terminal stability before sending Resume signal.
+## Version 1.0.1
+- Bumped version number for release.
