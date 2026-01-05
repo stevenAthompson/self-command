@@ -38,9 +38,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const WORKER_SCRIPT = path.join(__dirname, 'delayed_submit.js');
 server.registerTool('self_command', {
-    description: 'Sends a command to the Gemini CLI itself via tmux after a short delay. Returns immediately.',
+    description: 'Executes a long-running shell command in the background. Returns immediately, waits for the command to complete, and then sends a notification to Gemini via tmux.',
     inputSchema: z.object({
-        command: z.string().describe('The command to send to Gemini (e.g., "help", "list files").'),
+        command: z.string().describe('The shell command to execute (e.g., "npm install", "sleep 10").'),
     }),
 }, async ({ command }) => {
     // Check if we are in the correct tmux session BEFORE starting

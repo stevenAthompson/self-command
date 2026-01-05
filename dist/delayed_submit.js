@@ -3,7 +3,9 @@
  * Copyright 2026 Steven A. Thompson
  * SPDX-License-Identifier: MIT
  */
-import { execSync } from 'child_process';
+import { execSync, exec } from 'child_process';
+import { promisify } from 'util';
+const execAsync = promisify(exec);
 const SESSION_NAME = process.env.GEMINI_TMUX_SESSION_NAME || 'gemini-cli';
 async function main() {
     const args = process.argv.slice(2);
@@ -15,28 +17,39 @@ async function main() {
     const command = Buffer.from(encodedCommand, 'base64').toString('utf-8');
     const target = `${SESSION_NAME}:0.0`;
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-    // console.log(`[Detached] Waiting 3 seconds before sending command...`);
+    // console.log(`[Detached] Waiting 3 seconds before executing command...`);
     await delay(3000);
     try {
-        // 1. Reset state: Send Escape and Ctrl-u to clear any existing input
+        // 1. Execute the command (long-running)
+        // We use execAsync to wait for completion
+        // We could capture stdout/stderr here if we wanted to log it or send it back
+        await execAsync(command);
+    }
+    catch (error) {
+        // If the command fails, we might want to notify Gemini about the failure too?
+        // For now, we proceed to notify completion (or maybe include error info)
+        // The requirement says "upon completion... send a notice".
+        console.error(`Command failed: ${error}`);
+    }
+    try {
+        const notification = "[SYSTEM COMMAND] Command complete. Resume.";
+        // 2. Reset state: Send Escape and Ctrl-u to clear any existing input
         execSync(`tmux send-keys -t ${target} Escape`);
         await delay(100);
         execSync(`tmux send-keys -t ${target} C-u`);
         await delay(200);
-        // 2. Type the message character by character (slow-typing technique)
-        for (const char of command) {
+        // 3. Type the notification message
+        for (const char of notification) {
             // Escape special characters for shell/tmux
             const escapedChar = char === "'" ? "'\\''" : char;
             execSync(`tmux send-keys -t ${target} '${escapedChar}'`);
             await delay(20);
         }
-        // 3. Submit with Enter
+        // 4. Submit with Enter
         await delay(500);
         execSync(`tmux send-keys -t ${target} Enter`);
     }
     catch (error) {
-        // Silently fail or log to a file if needed, since we are detached
-        // console.error(`[Detached] Failed: ${error}`);
         process.exit(1);
     }
 }
