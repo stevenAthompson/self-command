@@ -64,7 +64,7 @@ describe('self_command MCP Server', () => {
     expect(mocks.registerTool).toHaveBeenCalledWith(
       'self_command',
       expect.objectContaining({
-        description: expect.stringContaining('Executes a long-running shell command'),
+        description: expect.stringContaining('Sends a command to the Gemini CLI itself'),
       }),
       expect.any(Function),
     );
