@@ -4,4 +4,10 @@
 - Once stability is detected (implying command completion), a notification `[SYSTEM COMMAND] Command complete. Resume.` is sent to the Gemini CLI.
 - Updated `self_command.ts` description to reflect this monitoring capability.
 - Verified functionality via manual foreground execution which successfully targeted the running session.
-- Committed changes.
+- Committed changes.## [2026-01-04] Corrected Link Command Guidance
+- User encountered an error when trying to link the extension using `gemini extensions install link .`.
+- Clarified that the correct command for local development is `gemini extensions link .`.
+- Verified that the `dist` directory is populated and all unit tests (4/4) pass.
+- Testing self_command with a 10-second sleep request to verify the tmux injection and stability monitoring.
+- SUCCESS: Completed end-to-end test of self_command. Verified command injection, execution of 'sleep 10', stability monitoring, and receipt of the resume notification.
+- Cleanup: Updated .gitignore to exclude node_modules and dist. Removed tracked build artifacts.

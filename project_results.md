@@ -47,6 +47,7 @@ The `self_command` project provides a Gemini CLI extension that allows the agent
 -   **Unit Tests:** `npm test` passes 100% (4/4 tests passed).
 -   **Build:** `npm run build` succeeds.
 -   **Stability Logic:** Uses a sliding window of stability checks (default 3 checks * 1 sec interval) with a max timeout of 5 minutes.
+-   **Integration Test (10s Sleep):** SUCCESS. Verified end-to-end flow: command injection, execution of "sleep 10", terminal stability monitoring, and receipt of "[SYSTEM COMMAND] Command complete. Resume." notification.
 -   **Manual Verification:** Verified that running `delayed_submit.js` manually correctly targets the active tmux pane and injects keys (confirmed by "User cancelled the operation" message when running in foreground, indicating successful interruption of the running process). This confirms the key injection mechanism works as intended.
 
 ## Customized Code Description
@@ -67,7 +68,9 @@ The `self_command` project provides a Gemini CLI extension that allows the agent
 1.  **Ensure you are in tmux:** Run `tmux ls` to see if `gemini-cli` exists.
 2.  **Check session name:** Use `./gemini_tmux.sh` to ensure you are in the expected session.
 3.  **Check build:** Run `npm run build`.
+4.  **Linking for development:** Use `gemini extensions link .` (do not use `install link`).
 
 ## Recent Changes (2026-01-04)
 - **Monitoring Feature:** Updated `delayed_submit.ts` to include a polling loop that watches `tmux capture-pane`. This ensures the resume notification is sent only after the command's output has stabilized.
 - **Revert:** Reverted the previous attempt to run commands as shell sub-processes. We are strictly operating on the tmux session.
+- **Command Guidance:** Clarified the correct command for linking local extensions to resolve user confusion between `install` and `link`.
