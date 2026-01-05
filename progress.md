@@ -12,3 +12,4 @@
 - SUCCESS: Completed end-to-end test of self_command. Verified command injection, execution of 'sleep 10', stability monitoring, and receipt of the resume notification.
 - Cleanup: Updated .gitignore to exclude node_modules and dist. Removed tracked build artifacts.
 - Correction: Removed node_modules and dist from .gitignore and added them back to git tracking. This is required for git-based installation.
+- SUCCESS: Verified self_command remains functional after restoring node_modules and dist to git tracking. Test command 'list files' successfully injected and resumed.

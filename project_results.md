@@ -47,7 +47,7 @@ The `self_command` project provides a Gemini CLI extension that allows the agent
 -   **Unit Tests:** `npm test` passes 100% (4/4 tests passed).
 -   **Build:** `npm run build` succeeds.
 -   **Stability Logic:** Uses a sliding window of stability checks (default 3 checks * 1 sec interval) with a max timeout of 5 minutes.
--   **Integration Test (10s Sleep):** SUCCESS. Verified end-to-end flow: command injection, execution of "sleep 10", terminal stability monitoring, and receipt of "[SYSTEM COMMAND] Command complete. Resume." notification.
+-   **Post-Fix Verification:** SUCCESS. The tool remains fully operational after restoring `node_modules` and `dist` to git tracking. End-to-end functionality confirmed with 'list files' test command.
 -   **Manual Verification:** Verified that running `delayed_submit.js` manually correctly targets the active tmux pane and injects keys (confirmed by "User cancelled the operation" message when running in foreground, indicating successful interruption of the running process). This confirms the key injection mechanism works as intended.
 
 ## Customized Code Description
