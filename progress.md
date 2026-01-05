@@ -11,3 +11,4 @@
 - Testing self_command with a 10-second sleep request to verify the tmux injection and stability monitoring.
 - SUCCESS: Completed end-to-end test of self_command. Verified command injection, execution of 'sleep 10', stability monitoring, and receipt of the resume notification.
 - Cleanup: Updated .gitignore to exclude node_modules and dist. Removed tracked build artifacts.
+- Correction: Removed node_modules and dist from .gitignore and added them back to git tracking. This is required for git-based installation.

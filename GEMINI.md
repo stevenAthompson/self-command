@@ -5,19 +5,12 @@ You are an agentic coding assistant. Your goal is to execute Project self_comman
 The goal of the project is to create a Gemini Cli Extension. The complete project MUST:
 	Allow Gemini CLI to send itself commands using a tmux methodology. It will allow Gemini CLI to send itself any arbitrary command rather than performing a shell execution. Given the way the tmux method works this means that when "self_command" is called the currently running tool call will be cancelled if it doesn't exit immediately. So we must return immediately, pause for approximately 3 seconds and THEN send the requested command via tmux. 
 
-	The code should fail gracefully when  gemini was started outside of tmux and commands can't be sent, and it should fail BEFORE trying to send the command to gemini cli.
-	
-	All code, documentation, tests, etc should be clean and professional.
-	
-	The final working project should be uploaded to a new public github repository. 
-	
-	Ask questions if you are confused or stumped by an instruciton or find problems in the code that can not be solved. Do not make assumptions.
-	
-	All code must be portable and use the proper variables. No hardcoded paths, etc.
-	
-	The gemini_tmux.sh file is required to launch gemini cli properly inside of a tmux session. Don't delete it. You may tweak it if it needs to be updated or corrected.
+	The code should fail gracefully when  gemini was started outside of tmux and commands can't be sent, and it should fail BEFORE trying to execute the long runnning command. 
+
+	IMPORTANT: Do NOT add "node_modules" or "dist" to .gitignore. This project requires dependencies and build artifacts to be committed to the repository for git-based installation.
 
 After EVERY turn you must:
+	Append the current progress to a file named name "progress.md".
 	Append the current progress to a file named name "progress.md". Include a brief description of the most recent work. This file should only ever be appended to: NEVER delete this file. NEVER edit this file. It is a log of all progress, even mistakes. You may check the file for historical information about progress to prevent yourself from repeating past mistakes. 
 	Do NOT edit unit tests to work around failing tests. Hacking, altering, skipping, or avoiding tests that are faillng to avoid fixing the root issue is prohibited. If you are stuck ask for help and end your turn instead.
 	In another file named "project_results.md":
