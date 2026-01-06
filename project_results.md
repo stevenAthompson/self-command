@@ -42,6 +42,7 @@ The `self_command` project provides a Gemini CLI extension that allows the agent
     3. Enters a loop: `tmux capture-pane` every 1s.
     4. If pane is stable for 3 checks, injects the resume notification.
 -   `gemini-extension.json`: Configured with `${extensionPath}` and `node`.
+-   `GEMINI.md`: Provides usage instructions and context for the agent using the extension.
 
 ## Verification Results
 -   **Unit Tests:** `npm test` passes 100% (4/4 tests passed).
