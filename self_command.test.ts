@@ -42,7 +42,8 @@ vi.mock('child_process', () => ({
 }));
 
 describe('self_command MCP Server', () => {
-  let toolFn: Function;
+  let selfCommandFn: Function;
+  let yieldTurnFn: Function;
   const ORIGINAL_ENV = process.env;
 
   beforeEach(async () => {
@@ -51,7 +52,14 @@ describe('self_command MCP Server', () => {
     process.env = { ...ORIGINAL_ENV }; // Clone env
     // Dynamically import to trigger tool registration
     await import('./self_command.js');
-    toolFn = (mocks.registerTool as Mock).mock.calls[0][2];
+    
+    // Find the tool handlers from the mock calls
+    const calls = (mocks.registerTool as Mock).mock.calls;
+    const selfCommandCall = calls.find(call => call[0] === 'self_command');
+    const yieldTurnCall = calls.find(call => call[0] === 'yield_turn');
+
+    if (selfCommandCall) selfCommandFn = selfCommandCall[2];
+    if (yieldTurnCall) yieldTurnFn = yieldTurnCall[2];
   });
 
   afterEach(() => {
@@ -70,29 +78,39 @@ describe('self_command MCP Server', () => {
     );
   });
 
-  it('should fail if TMUX env var is missing', async () => {
+  it('should register the "yield_turn" tool', () => {
+    expect(mocks.registerTool).toHaveBeenCalledWith(
+      'yield_turn',
+      expect.objectContaining({
+        description: expect.stringContaining('end your turn and await results'),
+      }),
+      expect.any(Function),
+    );
+  });
+
+  it('should fail self_command if TMUX env var is missing', async () => {
     delete process.env.TMUX;
-    const result = await toolFn({ command: 'help' });
+    const result = await selfCommandFn({ command: 'help' });
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain("Error: Not running inside tmux session");
   });
 
-  it('should fail if tmux session name does not match', async () => {
+  it('should fail self_command if tmux session name does not match', async () => {
     process.env.TMUX = '/tmp/tmux-1000/default,1234,0';
     (execSync as Mock).mockReturnValue('other-session\n');
 
-    const result = await toolFn({ command: 'help' });
+    const result = await selfCommandFn({ command: 'help' });
 
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain("Error: Not running inside tmux session");
   });
 
-  it('should return immediately and spawn the worker process', async () => {
+  it('self_command should return immediately and spawn the worker process', async () => {
     process.env.TMUX = '/tmp/tmux-1000/default,1234,0';
     (execSync as Mock).mockReturnValue('gemini-cli\n');
 
     const command = 'echo hello';
-    const result = await toolFn({ command });
+    const result = await selfCommandFn({ command });
 
     expect(result.content[0].text).toContain('Will execute "echo hello" in ~3 seconds');
 
@@ -108,6 +126,29 @@ describe('self_command MCP Server', () => {
     );
     
     // Verify unref was called on the child process
+    expect(mocks.spawn.mock.results[0].value.unref).toHaveBeenCalled();
+  });
+
+  it('yield_turn should spawn the yield worker process', async () => {
+    process.env.TMUX = '/tmp/tmux-1000/default,1234,0';
+    (execSync as Mock).mockReturnValue('gemini-cli\n');
+
+    const result = await yieldTurnFn({});
+
+    expect(result.content[0].text).toContain('Yielding turn');
+
+    // Verify spawn was called
+    expect(mocks.spawn).toHaveBeenCalledWith(
+        process.execPath,
+        expect.arrayContaining([expect.stringContaining('delayed_yield.js')]),
+        expect.objectContaining({
+            detached: true,
+            stdio: 'ignore',
+            cwd: expect.any(String)
+        })
+    );
+    
+    // Verify unref was called
     expect(mocks.spawn.mock.results[0].value.unref).toHaveBeenCalled();
   });
 });
