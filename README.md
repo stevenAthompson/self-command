@@ -13,6 +13,17 @@ This extension enables the Gemini agent to execute CLI commands "on itself" by i
 3.  **Tmux Injection:** It uses `tmux send-keys` to simulate user input in the `gemini-cli` session.
 4.  **Monitoring & Resume:** A background worker monitors the terminal output. Once it detects the command has finished (by observing screen stability), it sends a "Resume" signal to the agent, ensuring the agent knows when it can proceed.
 
+## Tools
+
+### self_command
+Sends a command to the Gemini CLI. It waits for the session to stabilize after the command is sent and then notifies the agent to resume.
+
+### yield_turn
+Explicitly ends the agent's current turn and prepares the CLI for subsequent input.
+
+**Why it exists:**
+The Gemini agent is not naturally "aware" of background processes or tmux-style key injections. When a command is scheduled (e.g., via `self_command` or a long-running background task), the agent may need to stop generating and wait for that specific task to complete. `yield_turn` sends a `Ctrl-C` followed by two `Enter` keys to the tmux session, clearing the input line and ensuring the CLI prompt is fresh and ready for the next event.
+
 ## Prerequisites
 
 -   **Tmux:** You must run the Gemini CLI inside a tmux session named `gemini-cli`.
