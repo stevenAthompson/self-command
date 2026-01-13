@@ -33,10 +33,11 @@ const server = new McpServer({
     name: 'self-command-server',
     version: '1.0.0',
 });
-// Resolve the path to the worker script
+// Resolve the path to the worker scripts
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const WORKER_SCRIPT = path.join(__dirname, 'delayed_submit.js');
+const SUBMIT_WORKER_SCRIPT = path.join(__dirname, 'delayed_submit.js');
+const YIELD_WORKER_SCRIPT = path.join(__dirname, 'delayed_yield.js');
 server.registerTool('self_command', {
     description: 'Sends a command to the Gemini CLI via tmux. Returns immediately, waits for the command to execute and the session to stabilize, and then sends a completion notification.',
     inputSchema: z.object({
@@ -59,7 +60,7 @@ server.registerTool('self_command', {
     // We encode the command to base64 to avoid argument parsing issues
     const encodedCommand = Buffer.from(command).toString('base64');
     try {
-        const subprocess = spawn(process.execPath, [WORKER_SCRIPT, encodedCommand], {
+        const subprocess = spawn(process.execPath, [SUBMIT_WORKER_SCRIPT, encodedCommand], {
             detached: true,
             stdio: 'ignore', // Ignore stdio to allow parent to exit
             cwd: __dirname
@@ -82,6 +83,50 @@ server.registerTool('self_command', {
             {
                 type: 'text',
                 text: `Command received. Will execute "${command}" in ~3 seconds.`,
+            },
+        ],
+    };
+});
+server.registerTool('yield_turn', {
+    description: 'Sends a Ctl-C followed by two Enters to the gemini tmux session. Use this to end your turn and await results from a self-command or run-long-command.',
+    inputSchema: z.object({}),
+}, async () => {
+    // Check if we are in the correct tmux session BEFORE starting
+    if (!isInsideTmuxSession()) {
+        return {
+            content: [
+                {
+                    type: 'text',
+                    text: `Error: Not running inside tmux session '${SESSION_NAME}'.`,
+                },
+            ],
+            isError: true,
+        };
+    }
+    try {
+        const subprocess = spawn(process.execPath, [YIELD_WORKER_SCRIPT], {
+            detached: true,
+            stdio: 'ignore',
+            cwd: __dirname
+        });
+        subprocess.unref();
+    }
+    catch (err) {
+        return {
+            content: [
+                {
+                    type: 'text',
+                    text: `Failed to schedule yield action: ${err}`,
+                },
+            ],
+            isError: true,
+        };
+    }
+    return {
+        content: [
+            {
+                type: 'text',
+                text: `Yielding turn. Sending Ctl-C and Enters in ~3 seconds.`,
             },
         ],
     };

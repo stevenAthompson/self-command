@@ -72,8 +72,28 @@ The `self_command` project provides a Gemini CLI extension that allows the agent
 3.  **Check build:** Run `npm run build`.
 4.  **Linking for development:** Use `gemini extensions link .` (do not use `install link`).
 
+### Challenges and Solutions
+
+1. **Challenge: Premature Resume Signal.** 
+   - *Problem:* Initially, the extension only waited 3 seconds after injecting a command before sending the resume signal. This meant long-running commands (like `git clone` or a large `npm install`) would finish their output long after Gemini was told to "resume," leading to race conditions and messy terminal states.
+   - *Solution:* Implemented a stability monitoring loop in `delayed_submit.ts`. It now captures the tmux pane state every second and only sends the resume signal when the terminal content remains unchanged for several consecutive checks.
+
+2. **Challenge: Command Encoding.**
+   - *Problem:* Complex commands with special characters (quotes, pipes, redirects) were being mangled when passed as CLI arguments to the worker script.
+   - *Solution:* The command is now Base64 encoded before being passed to `delayed_submit.js`, ensuring it is preserved exactly as intended until it reaches the `tmux send-keys` logic.
+
+3. **Challenge: Environment Detection.**
+   - *Problem:* If the user ran the tool outside of the expected tmux session, the worker would still try to inject keys, potentially into a random or non-existent pane.
+   - *Solution:* Added strict pre-flight checks in `self_command.ts` to verify the environment matches `GEMINI_TMUX_SESSION_NAME` before allowing the tool to proceed.
+
 ## Recent Changes (2026-01-05)
 - **Version Bump:** Bumped version to 1.0.1 for release.
 - **Monitoring Feature:** Updated `delayed_submit.ts` to include a polling loop that watches `tmux capture-pane`. This ensures the resume notification is sent only after the command's output has stabilized.
 - **Revert:** Reverted the previous attempt to run commands as shell sub-processes. We are strictly operating on the tmux session.
 - **Command Guidance:** Clarified the correct command for linking local extensions to resolve user confusion between `install` and `link`.
+
+## Testing Phase
+- Started testing the self-command extension on the live environment.
+- Test Result: Successfully injected 'help' command via tmux. The command was received and processed by the CLI.
+- **Post-Test Verification (2026-01-06):** Successfully performed a live test by injecting the 'help' command. The worker correctly waited for output stability and sent the resume signal.
+- Test Result (run-long-command): Successfully executed 'sleep 5' in the background and received the completion notification.

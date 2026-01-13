@@ -40,3 +40,30 @@ You will receive an immediate confirmation that the command has been scheduled.
 ```text
 Command 'help' scheduled for execution. I will yield my turn now to allow it to run.
 ```
+
+## Yield Turn Command
+
+This extension also provides the `yield_turn` tool.
+
+### Usage
+
+Use this tool when you need to explicitly end your turn and ensure the CLI is ready to receive input, specifically when awaiting results from a `self_command` or the optional `run-long-command` integration. This command sends a `Ctrl-C` followed by two `Enter` presses to the tmux session, effectively clearing the line and ensuring a fresh prompt.
+
+### Tool Signature
+
+```typescript
+yield_turn({});
+```
+
+### Example
+
+```javascript
+// To yield the turn
+yield_turn({});
+```
+
+### Expected Output
+
+```text
+Yielding turn. Sending Ctl-C and Enters in ~3 seconds.
+```
