@@ -10,7 +10,7 @@ Use this tool when you need to execute a Gemini CLI command programmatically, su
 
 ```typescript
 self_command({
-  command: string; // The command to send to Gemini (e.g., "help", "list files").
+  command: string; // The command to send to Gemini (e.g., "/compress", "/help").
 });
 ```
 
@@ -18,7 +18,7 @@ self_command({
 
 ```javascript
 // To ask for help
-self_command({ command: "help" });
+self_command({ command: "/help" });
 ```
 
 ## How It Works
@@ -29,7 +29,7 @@ self_command({ command: "help" });
 
 ## CRITICAL INSTRUCTION
 
-**You MUST yield your turn immediately after calling this tool.** 
+**You MUST yield your turn immediately after calling this tool. You do NOT need to call the yield-turn tool each time you call self_command, just stop or halt your output.** 
 
 Do not attempt to perform other actions or wait for the result in the same turn. The injected command will be processed by the CLI as a new user input *after* your current turn ends. If you continue generating, you might interfere with the injected command.
 
@@ -47,7 +47,7 @@ This extension also provides the `yield_turn` tool.
 
 ### Usage
 
-Use this tool when you need to explicitly end your turn and ensure the CLI is ready to receive input, specifically when awaiting results from a `self_command` or the optional `run-long-command` integration. This command sends a `Ctrl-C` followed by two `Enter` presses to the tmux session, effectively clearing the line and ensuring a fresh prompt.
+Use this tool when you need to explicitly end your turn and ensure the CLI is ready to receive input, specifically when awaiting results from the optional `run-long-command` integration. Yeilding is already built into the "self-command" tool, so it shouldn't be necessary in that case. This command sends a `Ctrl-C` followed by two `Enter` presses to the tmux session, effectively clearing the line and ensuring a fresh prompt.
 
 ### Tool Signature
 

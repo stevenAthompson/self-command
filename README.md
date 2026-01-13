@@ -22,7 +22,7 @@ Sends a command to the Gemini CLI. It waits for the session to stabilize after t
 Explicitly ends the agent's current turn and prepares the CLI for subsequent input.
 
 **Why it exists:**
-The Gemini agent is not naturally "aware" of background processes or tmux-style key injections. When a command is scheduled (e.g., via `self_command` or a long-running background task), the agent may need to stop generating and wait for that specific task to complete. `yield_turn` sends a `Ctrl-C` followed by two `Enter` keys to the tmux session, clearing the input line and ensuring the CLI prompt is fresh and ready for the next event.
+The Gemini agent is not naturally "aware" of background processes or tmux-style key injections. When a command is scheduled (e.g., via the run-long-command extension or similar mechanisms), the agent may need to stop generating and wait for that specific task to complete. `yield_turn` sends a `Ctrl-C` followed by two `Enter` keys to the tmux session, clearing the input line and ensuring the CLI prompt is fresh and ready for the next event. This helps it to avoid loops and polling that might cause it to become "stuck."
 
 ## Prerequisites
 
