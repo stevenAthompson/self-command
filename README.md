@@ -9,7 +9,7 @@ This extension enables the Gemini agent to execute CLI commands "on itself" by i
 ## How it Works
 
 1.  **Immediate Return:** The tool acknowledges the request and returns immediately to avoid blocking the agent.
-2.  **Delay:** It waits for approximately 3 seconds to ensure the previous operation clears.
+2.  **Stability Check:** It waits for the terminal screen to become stable (no output changes) to ensure no other processes are writing to the screen before it begins typing.
 3.  **Tmux Injection:** It uses `tmux send-keys` to simulate user input in the `gemini-cli` session.
 4.  **Monitoring & Resume:** A background worker monitors the terminal output. Once it detects the command has finished (by observing screen stability), it sends a "Resume" signal to the agent, ensuring the agent knows when it can proceed.
 

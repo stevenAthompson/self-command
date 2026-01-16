@@ -1,6 +1,6 @@
 {
   "name": "self-command",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Gemini CLI Extension for sending self commands",
   "author": "Steven A. Thompson <steve@stevenathompson.com>",
   "license": "MIT",
