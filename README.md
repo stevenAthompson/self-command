@@ -18,6 +18,12 @@ This extension enables the Gemini agent to execute CLI commands "on itself" by i
 ### self_command
 Sends a command to the Gemini CLI. It waits for the session to stabilize after the command is sent and then notifies the agent to resume.
 
+### gemini_sleep
+Sleeps for a specified number of seconds and then sends a wake-up notification to the tmux session.
+
+### watch_log
+Monitors a log file and wakes the system up when the file changes or when new content matches a provided regex pattern.
+
 ### yield_turn
 Explicitly ends the agent's current turn and prepares the CLI for subsequent input.
 

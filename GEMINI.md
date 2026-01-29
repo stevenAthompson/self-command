@@ -1,69 +1,115 @@
 # Self Command Extension
 
-This extension provides the `self_command` tool, which allows the Gemini CLI agent to control its own interface by injecting commands into the active tmux session.
+This extension provides tools that allow the Gemini CLI agent to control its own interface via tmux, wait for tasks, and monitor files.
 
-## Usage
+## Tools
 
-Use this tool when you need to execute a Gemini CLI command programmatically, such as running a specific /command, listing files, or triggering other agent actions.
+### 1. self_command
 
-### Tool Signature
+Executes a Gemini CLI command programmatically.
 
+#### Usage
+Use this tool when you need to execute a Gemini CLI command, such as running a specific /command, listing files, or triggering other agent actions.
+
+**Tool Signature**
 ```typescript
 self_command({
   command: string; // The command to send to Gemini (e.g., "/compress", "/help").
 });
 ```
 
-### Example
-
+**Example**
 ```javascript
 // To ask for help
 self_command({ command: "/help" });
 ```
 
-## How It Works
+#### How It Works
+1.  **Tmux Injection**: Verifies it is running in a `tmux` session.
+2.  **Delayed Execution**: Sets up a delayed background process to inject the command.
+3.  **Stability Check**: Waits for the screen to be idle for **30 seconds** after execution to ensure the command has fully completed before notifying the agent to resume.
 
-1.  **Tmux Injection**: The tool verifies it is running in a `tmux` session.
-2.  **Delayed Execution**: It sets up a delayed background process to inject the command.
-3.  **Immediate Return**: The tool returns immediately to you.
+**CRITICAL INSTRUCTION**
+**You MUST yield your turn immediately after calling this tool.** Do not attempt to perform other actions.
 
-## CRITICAL INSTRUCTION
+---
 
-**You MUST yield your turn immediately after calling this tool. You do NOT need to call the yield-turn tool each time you call self_command, just stop or halt your output.** 
+### 2. gemini_sleep
 
-Do not attempt to perform other actions or wait for the result in the same turn. The injected command will be processed by the CLI as a new user input *after* your current turn ends. If you continue generating, you might interfere with the injected command.
+Sleeps for a specified duration and then sends a wake-up notification.
 
-## Expected Output
+#### Usage
+Use this tool to pause execution while waiting for a task that you know will take a specific amount of time, or when you simply need to wait before proceeding.
 
-You will receive an immediate confirmation that the command has been scheduled.
-
-```text
-Command 'help' scheduled for execution. I will yield my turn now to allow it to run.
+**Tool Signature**
+```typescript
+gemini_sleep({
+  seconds: number; // Number of seconds to sleep.
+});
 ```
 
-## Yield Turn Command
+**Example**
+```javascript
+// Sleep for 60 seconds
+gemini_sleep({ seconds: 60 });
+```
 
-This extension also provides the `yield_turn` tool.
+#### How It Works
+1.  **Wait**: The background process sleeps for the specified seconds.
+2.  **Wake Up**: It sends a notification to the tmux session, prompting the agent to resume.
 
-### Usage
+---
 
-Use this tool when you need to explicitly end your turn and ensure the CLI is ready to receive input, specifically when awaiting results from the optional `run-long-command` integration. Yeilding is already built into the "self-command" tool, so it shouldn't be necessary in that case. This command sends a `Ctrl-C` followed by two `Enter` presses to the tmux session, effectively clearing the line and ensuring a fresh prompt.
+### 3. watch_log
 
-### Tool Signature
+Monitors a file and wakes the system up when it changes or matches a specific pattern.
 
+#### Usage
+Use this tool to wait for a specific event in a log file (like a "Build Complete" message) or simply to wait for any activity in a file.
+
+**Tool Signature**
+```typescript
+watch_log({
+  file_path: string; // Absolute path to the log file to watch.
+  regex?: string; // Optional regex pattern to match against new log content.
+  wake_on_change?: boolean; // If true (and no regex), wakes on any file change. Defaults to true.
+});
+```
+
+**Examples**
+```javascript
+// Wake up when "Build Successful" appears in the log
+watch_log({
+  file_path: "/path/to/build.log",
+  regex: "Build Successful" 
+});
+
+// Wake up on any change to the log
+watch_log({
+  file_path: "/path/to/server.log"
+});
+```
+
+#### How It Works
+1.  **Monitor**: Polls the file for changes.
+2.  **Match**: If `regex` is provided, it scans *new* content for a match. If `regex` is omitted, it triggers on any size change.
+3.  **Wake Up**: Sends a notification to the tmux session when the condition is met.
+
+---
+
+### 4. yield_turn
+
+Explicitly ends the turn.
+
+#### Usage
+Use this tool when you need to explicitly end your turn and ensure the CLI is ready to receive input.
+
+**Tool Signature**
 ```typescript
 yield_turn({});
 ```
 
-### Example
-
+**Example**
 ```javascript
-// To yield the turn
 yield_turn({});
-```
-
-### Expected Output
-
-```text
-Yielding turn. Sending Ctl-C and Enters in ~3 seconds.
 ```

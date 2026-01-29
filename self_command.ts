@@ -43,6 +43,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const SUBMIT_WORKER_SCRIPT = path.join(__dirname, 'delayed_submit.js');
 const YIELD_WORKER_SCRIPT = path.join(__dirname, 'delayed_yield.js');
+const SLEEP_WORKER_SCRIPT = path.join(__dirname, 'delayed_sleep.js');
+const WATCH_WORKER_SCRIPT = path.join(__dirname, 'delayed_watch.js');
 
 server.registerTool(
   'self_command',
@@ -97,6 +99,84 @@ server.registerTool(
           text: `Command received. Will execute "${command}" in ~3 seconds.`, 
         },
       ],
+    };
+  },
+);
+
+server.registerTool(
+  'gemini_sleep',
+  {
+    description: 'Sleeps for a specified number of seconds and then sends a tmux message to wake the system up. Useful for waiting for long-running background tasks.',
+    inputSchema: z.object({
+      seconds: z.number().positive().describe('Number of seconds to sleep.'),
+    }),
+  },
+  async ({ seconds }) => {
+    if (!isInsideTmuxSession()) {
+      return {
+        content: [{ type: 'text', text: `Error: Not running inside tmux session '${SESSION_NAME}'.` }],
+        isError: true,
+      };
+    }
+
+    try {
+      const subprocess = spawn(process.execPath, [SLEEP_WORKER_SCRIPT, seconds.toString()], {
+        detached: true,
+        stdio: 'ignore',
+        cwd: __dirname
+      });
+      subprocess.unref();
+    } catch (err) {
+      return {
+        content: [{ type: 'text', text: `Failed to schedule sleep: ${err}` }],
+        isError: true,
+      };
+    }
+
+    return {
+      content: [{ type: 'text', text: `Sleeping for ${seconds} seconds...` }],
+    };
+  },
+);
+
+server.registerTool(
+  'watch_log',
+  {
+    description: 'Monitors a log file and wakes the system up when it changes or matches a regex.',
+    inputSchema: z.object({
+      file_path: z.string().describe('Absolute path to the log file to watch.'),
+      regex: z.string().optional().describe('Regex pattern to match against new log content. If provided, wakes only on match.'),
+      wake_on_change: z.boolean().optional().describe('If true (and no regex), wakes on any file change. Defaults to true if regex is missing.'),
+    }),
+  },
+  async ({ file_path, regex, wake_on_change }) => {
+    if (!isInsideTmuxSession()) {
+      return {
+        content: [{ type: 'text', text: `Error: Not running inside tmux session '${SESSION_NAME}'.` }],
+        isError: true,
+      };
+    }
+
+    // Default wake_on_change to true if regex is not provided
+    const effectiveWakeOnChange = wake_on_change ?? (regex === undefined);
+    const encodedRegex = regex ? Buffer.from(regex).toString('base64') : '';
+
+    try {
+      const subprocess = spawn(process.execPath, [WATCH_WORKER_SCRIPT, file_path, encodedRegex, effectiveWakeOnChange.toString()], {
+        detached: true,
+        stdio: 'ignore',
+        cwd: __dirname
+      });
+      subprocess.unref();
+    } catch (err) {
+      return {
+        content: [{ type: 'text', text: `Failed to schedule watch: ${err}` }],
+        isError: true,
+      };
+    }
+
+    return {
+      content: [{ type: 'text', text: `Watching ${file_path}...` }],
     };
   },
 );
