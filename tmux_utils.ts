@@ -16,7 +16,7 @@ export const SESSION_NAME = process.env.GEMINI_TMUX_SESSION_NAME || 'gemini-cli'
  * @param timeoutMs Maximum time to wait before giving up.
  * @returns {Promise<boolean>} True if stable, false if timed out.
  */
-export async function waitForStability(target: string, stableDurationMs: number = 3000, pollingIntervalMs: number = 1000, timeoutMs: number = 300000): Promise<boolean> {
+export async function waitForStability(target: string, stableDurationMs: number = 30000, pollingIntervalMs: number = 1000, timeoutMs: number = 300000): Promise<boolean> {
     const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
     const requiredChecks = Math.ceil(stableDurationMs / pollingIntervalMs);
     
@@ -56,8 +56,8 @@ export async function waitForStability(target: string, stableDurationMs: number 
 export async function sendNotification(target: string, message: string) {
     const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
     
-    // Ensure brief stability before notifying (don't interrupt typing)
-    await waitForStability(target, 1000, 500, 10000);
+    // Ensure stability before notifying (don't interrupt typing)
+    await waitForStability(target, 30000, 1000, 300000);
 
     // Clear input
     try {

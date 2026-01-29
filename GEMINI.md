@@ -27,7 +27,8 @@ self_command({ command: "/help" });
 #### How It Works
 1.  **Tmux Injection**: Verifies it is running in a `tmux` session.
 2.  **Delayed Execution**: Sets up a delayed background process to inject the command.
-3.  **Stability Check**: Waits for the screen to be idle for **30 seconds** after execution to ensure the command has fully completed before notifying the agent to resume.
+3.  **Pre-Execution Stability**: Waits for the screen to be idle for **30 seconds** before typing the command to ensure safety.
+4.  **Post-Execution Stability**: Waits for the screen to be idle for **30 seconds** after execution to ensure the command has fully completed before notifying the agent to resume.
 
 **CRITICAL INSTRUCTION**
 **You MUST yield your turn immediately after calling this tool.** Do not attempt to perform other actions.
@@ -56,7 +57,8 @@ gemini_sleep({ seconds: 60 });
 
 #### How It Works
 1.  **Wait**: The background process sleeps for the specified seconds.
-2.  **Wake Up**: It sends a notification to the tmux session, prompting the agent to resume.
+2.  **Stability Check**: Waits for the screen to be idle for **30 seconds** before injecting the notification.
+3.  **Wake Up**: Sends a notification to the tmux session, prompting the agent to resume.
 
 ---
 
@@ -93,7 +95,8 @@ watch_log({
 #### How It Works
 1.  **Monitor**: Polls the file for changes.
 2.  **Match**: If `regex` is provided, it scans *new* content for a match. If `regex` is omitted, it triggers on any size change.
-3.  **Wake Up**: Sends a notification to the tmux session when the condition is met.
+3.  **Stability Check**: Waits for the screen to be idle for **30 seconds** before injecting the notification.
+4.  **Wake Up**: Sends a notification to the tmux session when the condition is met.
 
 ---
 
@@ -113,3 +116,7 @@ yield_turn({});
 ```javascript
 yield_turn({});
 ```
+
+#### How It Works
+1.  **Stability Check**: Waits for the screen to be idle for **30 seconds** before taking action.
+2.  **Yield**: Sends `Ctrl-C` followed by two `Enter` keystrokes to the tmux session.

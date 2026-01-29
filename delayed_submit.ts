@@ -24,7 +24,7 @@ async function main() {
 
   try {
     // 0. Ensure screen is stable BEFORE typing (Safety check)
-    await waitForStability(target, 2000, 500, 30000);
+    await waitForStability(target, 30000, 1000, 300000);
 
     // 1. Reset state
     execSync(`tmux send-keys -t ${target} Escape`);

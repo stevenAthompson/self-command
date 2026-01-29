@@ -13,7 +13,7 @@ export const SESSION_NAME = process.env.GEMINI_TMUX_SESSION_NAME || 'gemini-cli'
  * @param timeoutMs Maximum time to wait before giving up.
  * @returns {Promise<boolean>} True if stable, false if timed out.
  */
-export async function waitForStability(target, stableDurationMs = 3000, pollingIntervalMs = 1000, timeoutMs = 300000) {
+export async function waitForStability(target, stableDurationMs = 30000, pollingIntervalMs = 1000, timeoutMs = 300000) {
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
     const requiredChecks = Math.ceil(stableDurationMs / pollingIntervalMs);
     let lastContent = '';
@@ -48,8 +48,8 @@ export async function waitForStability(target, stableDurationMs = 3000, pollingI
  */
 export async function sendNotification(target, message) {
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-    // Ensure brief stability before notifying (don't interrupt typing)
-    await waitForStability(target, 1000, 500, 10000);
+    // Ensure stability before notifying (don't interrupt typing)
+    await waitForStability(target, 30000, 1000, 300000);
     // Clear input
     try {
         execSync(`tmux send-keys -t ${target} Escape`);

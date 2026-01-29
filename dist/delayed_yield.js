@@ -4,12 +4,12 @@
  * SPDX-License-Identifier: MIT
  */
 import { execSync } from 'child_process';
-const SESSION_NAME = process.env.GEMINI_TMUX_SESSION_NAME || 'gemini-cli';
+import { SESSION_NAME, waitForStability } from './tmux_utils.js';
 async function main() {
     const target = `${SESSION_NAME}:0.0`;
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-    // Wait 3 seconds before starting to ensure the agent has finished its turn
-    await delay(3000);
+    // Wait for stability before interrupting
+    await waitForStability(target, 30000, 1000, 300000);
     try {
         // 1. Send Ctrl-C to interrupt any current command or clear line
         execSync(`tmux send-keys -t ${target} C-c`);
