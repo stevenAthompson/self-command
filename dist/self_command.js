@@ -84,7 +84,7 @@ server.registerTool('self_command', {
         content: [
             {
                 type: 'text',
-                text: `Command received. Will execute "${command}" in ~3 seconds.`,
+                text: `Background task started. Will execute "${command}" in ~3 seconds and notify upon completion.`,
             },
         ],
     };
@@ -116,7 +116,7 @@ server.registerTool('gemini_sleep', {
         };
     }
     return {
-        content: [{ type: 'text', text: `Sleeping for ${seconds} seconds...` }],
+        content: [{ type: 'text', text: `Sleep background task started. Will sleep for ${seconds} seconds and notify upon completion.` }],
     };
 });
 server.registerTool('watch_log', {
@@ -151,11 +151,11 @@ server.registerTool('watch_log', {
         };
     }
     return {
-        content: [{ type: 'text', text: `Watching ${file_path}...` }],
+        content: [{ type: 'text', text: `Log monitor background task started for ${file_path}. Will notify upon match/change.` }],
     };
 });
 server.registerTool('yield_turn', {
-    description: 'Sends a Ctl-C followed by two Enters to the gemini tmux session. Use this to end your turn and await results from a self-command or run-long-command.',
+    description: 'Sends a Ctl-C followed by two Enters to the gemini tmux session. Use this to end your turn and await results from a self-command or run-long-command. CRITICAL: Do not call any other tools in the same turn as this tool.',
     inputSchema: z.object({}),
 }, async () => {
     // Check if we are in the correct tmux session BEFORE starting

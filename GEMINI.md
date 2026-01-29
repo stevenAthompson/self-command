@@ -49,16 +49,8 @@ gemini_sleep({
 });
 ```
 
-**Example**
-```javascript
-// Sleep for 60 seconds
-gemini_sleep({ seconds: 60 });
-```
-
-#### How It Works
-1.  **Wait**: The background process sleeps for the specified seconds.
-2.  **Stability Check**: Waits for the screen to be idle for **30 seconds** before injecting the notification.
-3.  **Wake Up**: Sends a notification to the tmux session, prompting the agent to resume.
+**CRITICAL INSTRUCTION**
+**You MUST yield your turn immediately after calling this tool.** Do not attempt to perform other actions in the same turn. This tool must be the LAST and ONLY tool called if you intend to wait for the sleep to complete.
 
 ---
 
@@ -98,6 +90,9 @@ watch_log({
 3.  **Stability Check**: Waits for the screen to be idle for **30 seconds** before injecting the notification.
 4.  **Wake Up**: Sends a notification to the tmux session when the condition is met.
 
+**CRITICAL INSTRUCTION**
+**You MUST yield your turn immediately after calling this tool.** Do not attempt to perform other actions in the same turn. This tool must be the LAST and ONLY tool called if you intend to wait for the watch to trigger.
+
 ---
 
 ### 4. yield_turn
@@ -118,5 +113,7 @@ yield_turn({});
 ```
 
 #### How It Works
-1.  **Stability Check**: Waits for the screen to be idle for **30 seconds** before taking action.
-2.  **Yield**: Sends `Ctrl-C` followed by two `Enter` keystrokes to the tmux session.
+1.  **Yield**: Sends `Ctrl-C` followed by two `Enter` keystrokes to the tmux session.
+
+**CRITICAL INSTRUCTION**
+**You MUST NOT call any other tools in the same turn as `yield_turn`.** Calling other tools will cancel the yielding effect and keep the system active, resetting stability timers for background workers.
