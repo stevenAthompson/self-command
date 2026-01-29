@@ -22,6 +22,14 @@ const mocks = vi.hoisted(() => ({
   registerTool: vi.fn(),
   connect: vi.fn(),
   spawn: vi.fn().mockReturnValue({ unref: vi.fn() }),
+  existsSync: vi.fn().mockReturnValue(true),
+}));
+
+vi.mock('fs', () => ({
+  default: {
+    existsSync: mocks.existsSync,
+  },
+  existsSync: mocks.existsSync,
 }));
 
 vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
@@ -52,6 +60,7 @@ describe('self_command MCP Server', () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     process.env = { ...ORIGINAL_ENV }; // Clone env
+    mocks.existsSync.mockReturnValue(true); // Default to file existing
     // Dynamically import to trigger tool registration
     await import('./self_command.js');
     
@@ -133,7 +142,7 @@ describe('self_command MCP Server', () => {
     // Verify spawn was called
     expect(mocks.spawn).toHaveBeenCalledWith(
         process.execPath,
-        expect.arrayContaining([expect.stringContaining('delayed_yield.js')]),
+        expect.arrayContaining([expect.stringContaining('instant_yield.js')]),
         expect.objectContaining({
             detached: true,
             stdio: 'ignore',
@@ -152,7 +161,7 @@ describe('self_command MCP Server', () => {
 
     const result = await geminiSleepFn({ seconds: 10 });
 
-    expect(result.content[0].text).toContain('Sleeping for 10 seconds');
+    expect(result.content[0].text).toContain('Will sleep for 10 seconds');
 
     expect(mocks.spawn).toHaveBeenCalledWith(
         process.execPath,
@@ -168,7 +177,7 @@ describe('self_command MCP Server', () => {
 
     const result = await watchLogFn({ file_path: '/tmp/log.txt' });
 
-    expect(result.content[0].text).toContain('Watching /tmp/log.txt');
+    expect(result.content[0].text).toContain('Log monitor background task started');
 
     expect(mocks.spawn).toHaveBeenCalledWith(
         process.execPath,
