@@ -13,8 +13,7 @@ async function main() {
   const target = `${SESSION_NAME}:0.0`;
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  // AGGRESSIVE YIELD: Wait only 500ms to allow the tool to return, then interrupt immediately.
-  // We explicitly IGNORE screen stability to prevent the agent from chaining commands.
+  // AGGRESSIVE YIELD: Wait 500ms to allow the tool to return, then interrupt immediately.
   await delay(500);
 
   try {

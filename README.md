@@ -22,13 +22,18 @@ Sends a command to the Gemini CLI. It waits for the session to stabilize after t
 Sleeps for a specified number of seconds and then sends a wake-up notification to the tmux session.
 
 ### watch_log
-Monitors a log file and wakes the system up when the file changes or when new content matches a provided regex pattern.
+Monitors a log file and wakes the system up when the file changes or when new content matches a provided regex pattern. Supports a configurable timeout.
+
+### cancel_watch
+Cancels active log watchers, either globally or for a specific file.
 
 ### yield_turn
-Explicitly ends the agent's current turn and prepares the CLI for subsequent input.
+Acts as an immediate interrupt that terminates the agent's current turn by sending `Ctrl-C` and preparing the CLI for subsequent input.
 
 **Why it exists:**
-The Gemini agent is not naturally "aware" of background processes or tmux-style key injections. When a command is scheduled (e.g., via the run-long-command extension or similar mechanisms), the agent may need to stop generating and wait for that specific task to complete. `yield_turn` sends a `Ctrl-C` followed by two `Enter` keys to the tmux session, clearing the input line and ensuring the CLI prompt is fresh and ready for the next event. This helps it to avoid loops and polling that might cause it to become "stuck."
+The Gemini agent is not naturally "aware" of background processes or tmux-style key injections. When a command is scheduled (e.g., via the run-long-command extension), the agent needs to stop its current turn to wait for the completion notification. `yield_turn` breaks the execution loop by sending an interrupt signal after a minimal delay (500ms).
+
+**CRITICAL:** This tool MUST be the only action in your turn. Combining it with other tools will cause session state corruption and cancelled commands.
 
 ## Prerequisites
 

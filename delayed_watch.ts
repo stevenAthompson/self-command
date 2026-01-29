@@ -21,6 +21,11 @@ async function main() {
   // arg[2] is wake_on_change ("true"/"false")
   const wakeOnChange = args[2] === 'true';
 
+  // arg[3] is timeout in seconds
+  const timeoutSec = parseInt(args[3] || '3600', 10);
+  const timeoutMs = timeoutSec * 1000;
+  const startTime = Date.now();
+
   const target = `${SESSION_NAME}:0.0`;
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -41,6 +46,11 @@ async function main() {
 
   // Polling loop
   while (true) {
+    // Check timeout
+    if (Date.now() - startTime > timeoutMs) {
+        process.exit(0); // Timed out silently? Or should notify? Silently is probably better to avoid noise.
+    }
+
     await delay(1000);
 
     try {

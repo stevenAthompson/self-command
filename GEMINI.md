@@ -67,6 +67,7 @@ watch_log({
   file_path: string; // Absolute path to the log file to watch.
   regex?: string; // Optional regex pattern to match against new log content.
   wake_on_change?: boolean; // If true (and no regex), wakes on any file change. Defaults to true.
+  timeout_sec?: number; // Optional: Maximum time in seconds to watch. Defaults to 3600 (1 hour).
 });
 ```
 
@@ -95,12 +96,37 @@ watch_log({
 
 ---
 
-### 4. yield_turn
+### 4. cancel_watch
 
-Explicitly ends the turn.
+Cancels active log watchers.
 
 #### Usage
-Use this tool when you need to explicitly end your turn and ensure the CLI is ready to receive input.
+Use this tool to stop monitoring specific files or to cancel all active watchers.
+
+**Tool Signature**
+```typescript
+cancel_watch({
+  file_path?: string; // Optional: The file path to stop watching. If omitted, cancels ALL watchers.
+});
+```
+
+**Example**
+```javascript
+// Cancel all watchers for a specific file
+cancel_watch({ file_path: "/path/to/build.log" });
+
+// Cancel ALL active watchers
+cancel_watch({});
+```
+
+---
+
+### 5. yield_turn
+
+Explicitly ends the turn immediately.
+
+#### Usage
+Use this tool ONLY when you need to immediately terminate your current turn and return control to the user or await a background notification. This tool acts as an interrupt.
 
 **Tool Signature**
 ```typescript
@@ -113,7 +139,7 @@ yield_turn({});
 ```
 
 #### How It Works
-1.  **Yield**: Sends `Ctrl-C` followed by two `Enter` keystrokes to the tmux session.
+1.  **Immediate Interrupt**: Sends `Ctrl-C` followed by two `Enter` keystrokes to the tmux session after a minimal delay (500ms). This breaks the current command loop.
 
 **CRITICAL INSTRUCTION**
-**You MUST NOT call any other tools in the same turn as `yield_turn`.** Calling other tools will cancel the yielding effect and keep the system active, resetting stability timers for background workers.
+**You MUST NOT call any other tools in the same turn as `yield_turn`.** Calling other tools alongside `yield_turn` will lead to race conditions, cancelled commands, and session state corruption. This tool must be the SOLE action in your response.
