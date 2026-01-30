@@ -7,7 +7,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { execSync, spawn } from 'child_process';
+import { execSync, spawn, spawnSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import * as fs from 'fs';
@@ -27,6 +27,14 @@ const SUBMIT_WORKER_SCRIPT = path.join(__dirname, 'delayed_submit.js');
 const YIELD_WORKER_SCRIPT = path.join(__dirname, 'instant_yield.js');
 const SLEEP_WORKER_SCRIPT = path.join(__dirname, 'delayed_sleep.js');
 const WATCH_WORKER_SCRIPT = path.join(__dirname, 'delayed_watch.js');
+
+/**
+ * Generates a unique ID for request tracking.
+ * Uses a short timestamp based string.
+ */
+function getNextId(): string {
+  return Math.random().toString(36).substring(2, 6).toUpperCase();
+}
 
 server.registerTool(
   'self_command',
@@ -50,12 +58,13 @@ server.registerTool(
       };
     }
 
+    const id = getNextId();
     // Spawn the worker script detached
     // We encode the command to base64 to avoid argument parsing issues
     const encodedCommand = Buffer.from(command).toString('base64');
     
     try {
-      const subprocess = spawn(process.execPath, [SUBMIT_WORKER_SCRIPT, encodedCommand], {
+      const subprocess = spawn(process.execPath, [SUBMIT_WORKER_SCRIPT, encodedCommand, id], {
         detached: true,
         stdio: 'ignore', // Ignore stdio to allow parent to exit
         cwd: __dirname
@@ -67,7 +76,7 @@ server.registerTool(
         content: [
           {
             type: 'text',
-            text: `Failed to schedule command execution: ${err}`, 
+            text: `Failed to schedule command execution [${id}]: ${err}`, 
           },
         ],
         isError: true,
@@ -78,7 +87,7 @@ server.registerTool(
       content: [
         {
           type: 'text',
-          text: `Background task started. Will execute "${command}" in ~3 seconds and notify upon completion.`, 
+          text: `Background task [${id}] started. Will execute "${command}" in ~3 seconds and notify upon completion.`, 
         },
       ],
     };
@@ -107,6 +116,7 @@ server.registerTool(
       };
     }
 
+    const id = getNextId();
     const startTime = Date.now();
 
     // Spawn the background process
@@ -149,7 +159,7 @@ server.registerTool(
       }
 
       // Calculate available space for output
-      const overhead = 17 + cmdStr.length + codeStr.length;
+      const overhead = 22 + cmdStr.length + codeStr.length; // Extra 5 for ID
       const availableForOut = MAX_MSG_LEN - overhead;
       
       let outStr = output ? output.replace(/[\r\n]+/g, ' ').trim() : '';
@@ -158,7 +168,7 @@ server.registerTool(
         outStr = outStr.substring(0, truncateLen) + '...';
       }
 
-      let completionMessage = `Cmd: "${cmdStr}" ${codeStr} Out: [${outStr}]`;
+      let completionMessage = `[${id}] Cmd: "${cmdStr}" ${codeStr} Out: [${outStr}]`;
       
       if (duration < 1000) {
         completionMessage += " (Warn: Instant Exit)";
@@ -177,7 +187,7 @@ server.registerTool(
         cmdStr = cmdStr.substring(0, maxCmdLen - 3) + '...';
       }
 
-      const overhead = 10 + cmdStr.length;
+      const overhead = 15 + cmdStr.length; // Extra 5 for ID
       const availableForErr = MAX_MSG_LEN - overhead;
 
       let errStr = err.message;
@@ -186,7 +196,7 @@ server.registerTool(
         errStr = errStr.substring(0, truncateLen) + '...';
       }
 
-      const errorMessage = `Err: "${cmdStr}" (${errStr})`;
+      const errorMessage = `[${id}] Err: "${cmdStr}" (${errStr})`;
       const target = `${SESSION_NAME}:0.0`;
       await sendNotification(target, errorMessage);
     });
@@ -195,7 +205,7 @@ server.registerTool(
       content: [
         {
           type: 'text',
-          text: `Command "${command}" started in the background (PID: ${child.pid}, CWD: ${process.cwd()}). I will notify you when it finishes.`, 
+          text: `Command [${id}] "${command}" started in the background (PID: ${child.pid}, CWD: ${process.cwd()}). I will notify you when it finishes.`, 
         },
       ],
     };
@@ -218,8 +228,9 @@ server.registerTool(
       };
     }
 
+    const id = getNextId();
     try {
-      const subprocess = spawn(process.execPath, [SLEEP_WORKER_SCRIPT, seconds.toString()], {
+      const subprocess = spawn(process.execPath, [SLEEP_WORKER_SCRIPT, seconds.toString(), id], {
         detached: true,
         stdio: 'ignore',
         cwd: __dirname
@@ -227,13 +238,13 @@ server.registerTool(
       subprocess.unref();
     } catch (err) {
       return {
-        content: [{ type: 'text', text: `Failed to schedule sleep: ${err}` }],
+        content: [{ type: 'text', text: `Failed to schedule sleep [${id}]: ${err}` }],
         isError: true,
       };
     }
 
     return {
-      content: [{ type: 'text', text: `Sleep background task started. Will sleep for ${seconds} seconds and notify upon completion.` }],
+      content: [{ type: 'text', text: `Sleep background task [${id}] started. Will sleep for ${seconds} seconds and notify upon completion.` }],
     };
   },
 );
@@ -264,13 +275,14 @@ server.registerTool(
        };
     }
 
+    const id = getNextId();
     // Default wake_on_change to true if regex is not provided
     const effectiveWakeOnChange = wake_on_change ?? (regex === undefined);
     const encodedRegex = regex ? Buffer.from(regex).toString('base64') : '';
     const timeout = timeout_sec || 3600;
 
     try {
-      const subprocess = spawn(process.execPath, [WATCH_WORKER_SCRIPT, file_path, encodedRegex, effectiveWakeOnChange.toString(), timeout.toString()], {
+      const subprocess = spawn(process.execPath, [WATCH_WORKER_SCRIPT, file_path, encodedRegex, effectiveWakeOnChange.toString(), timeout.toString(), id], {
         detached: true,
         stdio: 'ignore',
         cwd: __dirname
@@ -278,13 +290,13 @@ server.registerTool(
       subprocess.unref();
     } catch (err) {
       return {
-        content: [{ type: 'text', text: `Failed to schedule watch: ${err}` }],
+        content: [{ type: 'text', text: `Failed to schedule watch [${id}]: ${err}` }],
         isError: true,
       };
     }
 
     return {
-      content: [{ type: 'text', text: `Log monitor background task started for ${file_path} (Timeout: ${timeout}s). Will notify upon match/change.` }],
+      content: [{ type: 'text', text: `Log monitor background task [${id}] started for ${file_path} (Timeout: ${timeout}s). Will notify upon match/change.` }],
     };
   },
 );
@@ -299,25 +311,27 @@ server.registerTool(
   },
   async ({ file_path }) => {
     try {
-      let command = 'pkill -f "delayed_watch.js"';
+      const args = ['-f'];
       if (file_path) {
         // Match specific file path argument
-        command = `pkill -f "delayed_watch.js ${file_path}"`;
+        args.push(`delayed_watch.js ${file_path}`);
+      } else {
+        args.push('delayed_watch.js');
       }
       
-      try {
-        execSync(command);
-        return {
+      const result = spawnSync('pkill', args);
+      
+      if (result.status === 0) {
+         return {
           content: [{ type: 'text', text: `Successfully cancelled watcher(s)${file_path ? ' for ' + file_path : ''}.` }],
         };
-      } catch (e: any) {
-        // pkill returns exit code 1 if no processes matched
-        if (e.status === 1) {
-             return {
-                content: [{ type: 'text', text: `No active watchers found${file_path ? ' for ' + file_path : ''}.` }],
-             };
-        }
-        throw e;
+      } else if (result.status === 1) {
+         // pkill returns 1 if no processes matched
+         return {
+            content: [{ type: 'text', text: `No active watchers found${file_path ? ' for ' + file_path : ''}.` }],
+         };
+      } else {
+         throw new Error(`pkill failed with status ${result.status}: ${result.stderr.toString()}`);
       }
     } catch (err) {
        return {
@@ -348,8 +362,9 @@ server.registerTool(
       };
     }
 
+    const id = getNextId();
     try {
-      const subprocess = spawn(process.execPath, [YIELD_WORKER_SCRIPT], {
+      const subprocess = spawn(process.execPath, [YIELD_WORKER_SCRIPT, id], {
         detached: true,
         stdio: 'ignore',
         cwd: __dirname
@@ -361,7 +376,7 @@ server.registerTool(
         content: [
           {
             type: 'text',
-            text: `Failed to schedule yield action: ${err}`, 
+            text: `Failed to schedule yield action [${id}]: ${err}`, 
           },
         ],
         isError: true,
@@ -372,7 +387,7 @@ server.registerTool(
       content: [
         {
           type: 'text',
-          text: `Yielding turn. Sending Ctl-C and Enters in ~3 seconds.`, 
+          text: `Yielding turn [${id}]. Sending Ctl-C and Enters in ~3 seconds.`, 
         },
       ],
     };

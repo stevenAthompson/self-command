@@ -5,30 +5,31 @@
  */
 
 import { execSync } from 'child_process';
-import { SESSION_NAME, waitForStability } from './tmux_utils.js';
+import { SESSION_NAME, waitForStability, sendNotification } from './tmux_utils.js';
 
 import * as fs from 'fs';
 
 async function main() {
+  const args = process.argv.slice(2);
+  const id = args[0] || '????';
   const target = `${SESSION_NAME}:0.0`;
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  // AGGRESSIVE YIELD: Wait 500ms to allow the tool to return, then interrupt immediately.
-  await delay(500);
+  // Small delay to allow MCP response to reach the client
+  await delay(1000);
 
   try {
-    // 1. Send Ctrl-C to interrupt any current command or clear line
+    // 1. Send C-c
     execSync(`tmux send-keys -t ${target} C-c`);
-    await delay(200);
-
-    // 2. Send Enter twice
+    await delay(100);
+    // 2. Send Enters
     execSync(`tmux send-keys -t ${target} Enter`);
-    await delay(200);
+    await delay(100);
     execSync(`tmux send-keys -t ${target} Enter`);
     
-  } catch (error: any) {
-    fs.writeFileSync('/tmp/yield_debug.log', `Error: ${error.message}\n`);
-    // Silently fail in detached mode
+    // 3. Notify
+    await sendNotification(target, `[${id}] Yielding complete.`);
+  } catch (error) {
     process.exit(1);
   }
 }

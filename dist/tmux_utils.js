@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 import { execSync } from 'child_process';
+import { FileLock } from './file_lock.js';
 export const SESSION_NAME = process.env.GEMINI_TMUX_SESSION_NAME || 'gemini-cli';
 /**
  * Checks if the current environment is running inside the 'gemini-cli' tmux session.
@@ -64,29 +65,32 @@ export async function waitForStability(target, stableDurationMs = 10000, polling
 /**
  * Sends a notification to the tmux pane.
  * Safely waits for a brief moment of stability before typing to avoid interruption.
+ * Serialized via file lock to prevent garbled output.
  */
 export async function sendNotification(target, message) {
-    const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-    // Ensure stability before notifying (don't interrupt typing)
-    await waitForStability(target, 10000, 1000, 300000);
-    // Clear input
-    try {
-        execSync(`tmux send-keys -t ${target} Escape`);
-        await delay(100);
-        execSync(`tmux send-keys -t ${target} C-u`);
-        await delay(200);
-        for (const char of message) {
-            const escapedChar = char === "'" ? "'\\''" : char;
-            execSync(`tmux send-keys -t ${target} '${escapedChar}'`);
-            await delay(20);
+    await FileLock.withLock('gemini-tmux-notification', async () => {
+        const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+        // Ensure stability before notifying (don't interrupt typing)
+        await waitForStability(target, 10000, 1000, 300000);
+        // Clear input
+        try {
+            execSync(`tmux send-keys -t ${target} Escape`);
+            await delay(100);
+            execSync(`tmux send-keys -t ${target} C-u`);
+            await delay(200);
+            for (const char of message) {
+                const escapedChar = char === "'" ? "'\\''" : char;
+                execSync(`tmux send-keys -t ${target} '${escapedChar}'`);
+                await delay(20);
+            }
+            await delay(500);
+            execSync(`tmux send-keys -t ${target} Enter`);
+            await delay(500);
+            execSync(`tmux send-keys -t ${target} Enter`);
         }
-        await delay(500);
-        execSync(`tmux send-keys -t ${target} Enter`);
-        await delay(500);
-        execSync(`tmux send-keys -t ${target} Enter`);
-    }
-    catch (e) {
-        // Ignore errors if tmux is gone
-        console.error(`Failed to notify Gemini via tmux: ${e}`);
-    }
+        catch (e) {
+            // Ignore errors if tmux is gone
+            console.error(`Failed to notify Gemini via tmux: ${e}`);
+        }
+    });
 }

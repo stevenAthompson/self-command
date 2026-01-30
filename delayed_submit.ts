@@ -15,6 +15,7 @@ async function main() {
 
   const encodedCommand = args[0];
   const command = Buffer.from(encodedCommand, 'base64').toString('utf-8');
+  const id = args[1] || '????';
 
   const target = `${SESSION_NAME}:0.0`;
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -49,7 +50,7 @@ async function main() {
     await waitForStability(target, 10000, 1000, 600000); // 10 min timeout
 
     // 5. Send notification
-    await sendNotification(target, "[SYSTEM COMMAND] Command complete. Resume.");
+    await sendNotification(target, `[${id}] Command complete. Resume.`);
     
   } catch (error) {
     process.exit(1);

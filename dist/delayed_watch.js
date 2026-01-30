@@ -18,6 +18,7 @@ async function main() {
     const wakeOnChange = args[2] === 'true';
     // arg[3] is timeout in seconds
     const timeoutSec = parseInt(args[3] || '3600', 10);
+    const id = args[4] || '????';
     const timeoutMs = timeoutSec * 1000;
     const startTime = Date.now();
     const target = `${SESSION_NAME}:0.0`;
@@ -64,12 +65,12 @@ async function main() {
                         newContent += chunk;
                     }
                     if (regex.test(newContent)) {
-                        await sendNotification(target, `[SYSTEM WATCH] Log matched regex "${regexString}". Waking up.`);
+                        await sendNotification(target, `[${id}] Log matched regex "${regexString}". Waking up.`);
                         process.exit(0);
                     }
                 }
                 else if (wakeOnChange) {
-                    await sendNotification(target, `[SYSTEM WATCH] Log changed. Waking up.`);
+                    await sendNotification(target, `[${id}] Log changed. Waking up.`);
                     process.exit(0);
                 }
                 lastSize = currentSize;

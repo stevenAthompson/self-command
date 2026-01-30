@@ -18,6 +18,9 @@ self_command({
 });
 ```
 
+**Response**
+Returns a text message confirming the task has started, including a unique **Request ID** (e.g., `[A1B2]`). This ID will also appear in the completion notification.
+
 **Example**
 ```javascript
 // To ask for help
@@ -49,6 +52,9 @@ gemini_sleep({
 });
 ```
 
+**Response**
+Returns a confirmation with a **Request ID**. The subsequent wake-up notification will include this same ID.
+
 **CRITICAL INSTRUCTION**
 **You MUST yield your turn immediately after calling this tool.** Do not attempt to perform other actions in the same turn. This tool must be the LAST and ONLY tool called if you intend to wait for the sleep to complete.
 
@@ -70,6 +76,9 @@ watch_log({
   timeout_sec?: number; // Optional: Maximum time in seconds to watch. Defaults to 3600 (1 hour).
 });
 ```
+
+**Response**
+Returns a confirmation with a **Request ID**. The notification triggered by a match or file change will include this ID.
 
 **Examples**
 ```javascript
@@ -133,6 +142,9 @@ Use this tool ONLY when you need to immediately terminate your current turn and 
 yield_turn({});
 ```
 
+**Response**
+Returns a confirmation with a **Request ID**.
+
 **Example**
 ```javascript
 yield_turn({});
@@ -159,6 +171,9 @@ run_long_command({
   command: string; // The shell command to execute.
 });
 ```
+
+**Response**
+Returns an immediate confirmation message containing the Background PID and a **Request ID** (e.g., `[A1B2]`). When the command completes, a notification with the same ID will be injected into the tmux session.
 
 **Example**
 ```javascript
