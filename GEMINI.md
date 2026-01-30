@@ -90,6 +90,9 @@ cancel_watch({
 
 Explicitly ends the turn immediately.
 
+#### Usage
+Use this tool only when you have triggered a long-running background task (like `self_command`, `run_long_command`, or `watch_log`) and need to wait for its completion, or when you explicitly need to end your turn to await further feedback or instructions from the user.
+
 **Tool Signature**
 ```typescript
 yield_turn({});
