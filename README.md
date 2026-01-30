@@ -1,6 +1,6 @@
 # Gemini CLI Self-Command Extension
 
-An MCP tool that allows the Gemini CLI to send commands to itself via tmux.
+An MCP tool that allows the Gemini CLI to send commands to itself, run very long commands in the background and be woken, sleep for a specified amount of time, watch logs and receive notifications, etc by leveraging tmux. After installing the extension you must lauch gemini-cli via tmux using the provided shell script or with somethign like: SESSION_NAME="gemini-cli"; tmux new-session -d -s $SESSION_NAME 'gemini'; tmux attach -t $SESSION_NAME
 
 ## Purpose
 
