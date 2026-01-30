@@ -20,14 +20,31 @@ export class FileLock {
       try {
         // 'wx' flag fails if file exists
         const fd = fs.openSync(this.lockFilePath, 'wx');
+        // Add PID to lock file for debugging and stale check
+        fs.writeSync(fd, process.pid.toString());
         fs.closeSync(fd);
-        // Add PID to lock file for debugging
-        fs.writeFileSync(this.lockFilePath, process.pid.toString());
         return true;
       } catch (e: any) {
         if (e.code === 'EEXIST') {
-          // Check for stale lock (optional, but good for safety)
-          // For now, just wait
+          // Check for stale lock
+          try {
+              const pid = parseInt(fs.readFileSync(this.lockFilePath, 'utf-8'), 10);
+              if (!isNaN(pid)) {
+                  try {
+                      process.kill(pid, 0); // Check if process exists
+                  } catch (err: any) {
+                      if (err.code === 'ESRCH') {
+                          // Process dead, remove stale lock
+                          try { fs.unlinkSync(this.lockFilePath); } catch (ignore) {}
+                          continue; // Retry immediately
+                      }
+                  }
+              }
+          } catch (err) {
+              // Ignore read errors, maybe it was just deleted
+          }
+
+          // Wait before retry
           await new Promise(resolve => setTimeout(resolve, this.retryInterval));
         } else {
           throw e;
