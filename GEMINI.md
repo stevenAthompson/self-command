@@ -143,3 +143,32 @@ yield_turn({});
 
 **CRITICAL INSTRUCTION**
 **You MUST NOT call any other tools in the same turn as `yield_turn`.** Calling other tools alongside `yield_turn` will lead to race conditions, cancelled commands, and session state corruption. This tool must be the SOLE action in your response.
+
+---
+
+### 6. run_long_command
+
+Executes a long-running shell command in the background and notifies Gemini when finished.
+
+#### Usage
+Use this tool when you encounter a task that involves a command expected to take a significant amount of time (e.g., complex builds, long-running tests, data processing) and you want to continue working or simply wait without blocking the CLI.
+
+**Tool Signature**
+```typescript
+run_long_command({
+  command: string; // The shell command to execute.
+});
+```
+
+**Example**
+```javascript
+run_long_command({ command: "npm run build-heavy-project" });
+```
+
+#### How It Works
+1.  **Background Execution**: Spawns the command as a detached background process.
+2.  **Immediate Return**: Returns immediately to the agent, confirming the task has started.
+3.  **Completion Notification**: When the command finishes, it uses `tmux` to inject a completion message (including exit code and a summary of output) into the agent's session, effectively "waking" it up.
+
+**CRITICAL INSTRUCTION**
+**You MUST yield your turn immediately after calling this tool.** Do not attempt to perform other actions in the same turn.

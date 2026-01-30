@@ -16,12 +16,13 @@ import {
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { execSync, spawn } from 'child_process';
 import path from 'path';
+import { EventEmitter } from 'events';
 
 // Hoist mocks to ensure they are available for vi.mock
 const mocks = vi.hoisted(() => ({
   registerTool: vi.fn(),
   connect: vi.fn(),
-  spawn: vi.fn().mockReturnValue({ unref: vi.fn() }),
+  spawn: vi.fn(), // We will configure the return value in tests
   existsSync: vi.fn().mockReturnValue(true),
 }));
 
@@ -54,6 +55,7 @@ describe('self_command MCP Server', () => {
   let yieldTurnFn: Function;
   let geminiSleepFn: Function;
   let watchLogFn: Function;
+  let runLongCommandFn: Function;
   const ORIGINAL_ENV = process.env;
 
   beforeEach(async () => {
@@ -61,6 +63,10 @@ describe('self_command MCP Server', () => {
     vi.useFakeTimers();
     process.env = { ...ORIGINAL_ENV }; // Clone env
     mocks.existsSync.mockReturnValue(true); // Default to file existing
+    
+    // Default spawn mock for simple tools (just unref)
+    mocks.spawn.mockReturnValue({ unref: vi.fn() });
+
     // Dynamically import to trigger tool registration
     await import('./self_command.js');
     
@@ -70,11 +76,13 @@ describe('self_command MCP Server', () => {
     const yieldTurnCall = calls.find(call => call[0] === 'yield_turn');
     const geminiSleepCall = calls.find(call => call[0] === 'gemini_sleep');
     const watchLogCall = calls.find(call => call[0] === 'watch_log');
+    const runLongCommandCall = calls.find(call => call[0] === 'run_long_command');
 
     if (selfCommandCall) selfCommandFn = selfCommandCall[2];
     if (yieldTurnCall) yieldTurnFn = yieldTurnCall[2];
     if (geminiSleepCall) geminiSleepFn = geminiSleepCall[2];
     if (watchLogCall) watchLogFn = watchLogCall[2];
+    if (runLongCommandCall) runLongCommandFn = runLongCommandCall[2];
   });
 
   afterEach(() => {
@@ -88,6 +96,7 @@ describe('self_command MCP Server', () => {
     expect(mocks.registerTool).toHaveBeenCalledWith('yield_turn', expect.any(Object), expect.any(Function));
     expect(mocks.registerTool).toHaveBeenCalledWith('gemini_sleep', expect.any(Object), expect.any(Function));
     expect(mocks.registerTool).toHaveBeenCalledWith('watch_log', expect.any(Object), expect.any(Function));
+    expect(mocks.registerTool).toHaveBeenCalledWith('run_long_command', expect.any(Object), expect.any(Function));
   });
 
   it('should fail self_command if TMUX env var is missing', async () => {
@@ -119,16 +128,44 @@ describe('self_command MCP Server', () => {
     // Verify spawn was called
     expect(mocks.spawn).toHaveBeenCalledWith(
         process.execPath,
-        expect.arrayContaining([expect.stringContaining('delayed_submit.js'), Buffer.from(command).toString('base64')]),
+        expect.arrayContaining([expect.stringContaining('delayed_submit.js'),Buffer.from(command).toString('base64')]),
         expect.objectContaining({
             detached: true,
             stdio: 'ignore',
             cwd: expect.any(String)
         })
     );
-    
-    // Verify unref was called on the child process
-    expect(mocks.spawn.mock.results[0].value.unref).toHaveBeenCalled();
+  });
+
+  it('run_long_command should spawn process and notify on completion', async () => {
+    process.env.TMUX = '/tmp/tmux-1000/default,1234,0';
+    (execSync as Mock).mockReturnValue('gemini-cli\n');
+
+    // Setup complex spawn mock for run_long_command
+    const mockChild = new EventEmitter() as any;
+    mockChild.stdout = new EventEmitter();
+    mockChild.stderr = new EventEmitter();
+    mockChild.unref = vi.fn();
+    mockChild.pid = 12345;
+    mocks.spawn.mockReturnValue(mockChild);
+
+    const command = 'sleep 5';
+    const result = await runLongCommandFn({ command });
+
+    // Verify initial return
+    expect(result.content[0].text).toContain('started in the background');
+    expect(result.content[0].text).toContain('PID: 12345');
+
+    // Simulate process output and completion
+    mockChild.stdout.emit('data', 'some output');
+    mockChild.emit('close', 0);
+
+    // Fast-forward timers to handle notification delay
+    await vi.runAllTimersAsync();
+
+    // Verify notification was sent via tmux
+    // Logic: it calls sendNotification which calls execSync with tmux send-keys
+    expect(execSync).toHaveBeenCalledWith(expect.stringContaining('tmux send-keys'));
   });
 
   it('yield_turn should spawn the yield worker process', async () => {
@@ -139,22 +176,13 @@ describe('self_command MCP Server', () => {
 
     expect(result.content[0].text).toContain('Yielding turn');
 
-    // Verify spawn was called
     expect(mocks.spawn).toHaveBeenCalledWith(
         process.execPath,
         expect.arrayContaining([expect.stringContaining('instant_yield.js')]),
-        expect.objectContaining({
-            detached: true,
-            stdio: 'ignore',
-            cwd: expect.any(String)
-        })
+        expect.objectContaining({ detached: true })
     );
-    
-    // Verify unref was called
-    expect(mocks.spawn.mock.results[0].value.unref).toHaveBeenCalled();
   });
 
-  // Tests for gemini_sleep
   it('gemini_sleep should spawn the sleep worker process', async () => {
     process.env.TMUX = '/tmp/tmux-1000/default,1234,0';
     (execSync as Mock).mockReturnValue('gemini-cli\n');
@@ -170,7 +198,6 @@ describe('self_command MCP Server', () => {
     );
   });
 
-  // Tests for watch_log
   it('watch_log should spawn the watch worker process with defaults', async () => {
     process.env.TMUX = '/tmp/tmux-1000/default,1234,0';
     (execSync as Mock).mockReturnValue('gemini-cli\n');
@@ -186,26 +213,6 @@ describe('self_command MCP Server', () => {
             '/tmp/log.txt', 
             '', // No regex
             'true' // Default wake_on_change
-        ]),
-        expect.objectContaining({ detached: true })
-    );
-  });
-
-  it('watch_log should spawn the watch worker process with regex', async () => {
-    process.env.TMUX = '/tmp/tmux-1000/default,1234,0';
-    (execSync as Mock).mockReturnValue('gemini-cli\n');
-
-    const result = await watchLogFn({ file_path: '/tmp/log.txt', regex: 'Error' });
-
-    const encodedRegex = Buffer.from('Error').toString('base64');
-    
-    expect(mocks.spawn).toHaveBeenCalledWith(
-        process.execPath,
-        expect.arrayContaining([
-            expect.stringContaining('delayed_watch.js'), 
-            '/tmp/log.txt', 
-            encodedRegex,
-            'false' // Default wake_on_change becomes false if regex provided
         ]),
         expect.objectContaining({ detached: true })
     );

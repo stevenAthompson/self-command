@@ -35,6 +35,9 @@ The Gemini agent is not naturally "aware" of background processes or tmux-style 
 
 **CRITICAL:** This tool MUST be the only action in your turn. Combining it with other tools will cause session state corruption and cancelled commands.
 
+### run_long_command
+Executes a long-running shell command in the background without blocking the agent. It notifies Gemini upon completion (success or failure) by injecting a message into the tmux session.
+
 ## Prerequisites
 
 -   **Tmux:** You must run the Gemini CLI inside a tmux session named `gemini-cli`.

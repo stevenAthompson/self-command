@@ -5,8 +5,7 @@
   "mcpServers": {
     "selfCommand": {
       "command": "node",
-      "args": ["${extensionPath}${/}dist${/}self_command.js"],
-      "cwd": "${extensionPath}"
+      "args": ["${extensionPath}${/}dist${/}self_command.js"]
     }
   }
 }

@@ -10,30 +10,10 @@ import { z } from 'zod';
 import { execSync, spawn } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
-
 import * as fs from 'fs';
 
-const SESSION_NAME = process.env.GEMINI_TMUX_SESSION_NAME || 'gemini-cli';
-
-/**
- * Checks if the current environment is running inside the 'gemini-cli' tmux session.
- * @returns {boolean} True if the session exists and we are inside it, false otherwise.
- */
-function isInsideTmuxSession(): boolean {
-  // 1. Check if the TMUX environment variable is set (indicates we are in a tmux client)
-  if (!process.env.TMUX) {
-    return false;
-  }
-
-  try {
-    // 2. Query tmux for the current session name
-    const currentSessionName = execSync('tmux display-message -p "#S"', { encoding: 'utf-8' }).trim();
-    return currentSessionName === SESSION_NAME;
-  } catch (error) {
-    // If tmux command fails, assume not in a valid session
-    return false;
-  }
-}
+// Import shared utilities
+import { isInsideTmuxSession, sendNotification, SESSION_NAME } from './tmux_utils.js';
 
 const server = new McpServer({
   name: 'self-command-server',
@@ -99,6 +79,123 @@ server.registerTool(
         {
           type: 'text',
           text: `Background task started. Will execute "${command}" in ~3 seconds and notify upon completion.`, 
+        },
+      ],
+    };
+  },
+);
+
+server.registerTool(
+  'run_long_command',
+  {
+    description: 'Executes a long-running shell command in the background and notifies Gemini when finished.',
+    inputSchema: z.object({
+      command: z.string().describe('The shell command to execute.'),
+    }),
+  },
+  async ({ command }) => {
+    // Check if we are in the correct tmux session BEFORE starting the command
+    if (!isInsideTmuxSession()) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error: Not running inside tmux session '${SESSION_NAME}'. This tool requires being in a tmux session named '${SESSION_NAME}' to wake up the agent upon completion.`, 
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    const startTime = Date.now();
+
+    // Spawn the background process
+    const child = spawn(command, {
+      shell: true,
+      detached: true,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    let output = '';
+    const MAX_OUTPUT_LENGTH = 200;
+
+    if (child.stdout) {
+      child.stdout.on('data', (data) => {
+        if (output.length < MAX_OUTPUT_LENGTH) {
+          output += data.toString();
+        }
+      });
+    }
+
+    if (child.stderr) {
+      child.stderr.on('data', (data) => {
+        if (output.length < MAX_OUTPUT_LENGTH) {
+          output += data.toString();
+        }
+      });
+    }
+
+    // Set up completion handler
+    child.on('close', async (code) => {
+      const duration = Date.now() - startTime;
+      const MAX_MSG_LEN = 64;
+      const codeStr = `(${code})`;
+      
+      // Truncate command
+      let cmdStr = command;
+      const maxCmdLen = 15;
+      if (cmdStr.length > maxCmdLen) {
+        cmdStr = cmdStr.substring(0, maxCmdLen - 3) + '...';
+      }
+
+      // Calculate available space for output
+      const overhead = 17 + cmdStr.length + codeStr.length;
+      const availableForOut = MAX_MSG_LEN - overhead;
+      
+      let outStr = output ? output.replace(/[\r\n]+/g, ' ').trim() : '';
+      if (outStr.length > availableForOut) {
+        const truncateLen = Math.max(0, availableForOut - 3);
+        outStr = outStr.substring(0, truncateLen) + '...';
+      }
+
+      let completionMessage = `Cmd: "${cmdStr}" ${codeStr} Out: [${outStr}]`;
+      
+      if (duration < 1000) {
+        completionMessage += " (Warn: Instant Exit)";
+      }
+
+      const target = `${SESSION_NAME}:0.0`;
+      await sendNotification(target, completionMessage);
+    });
+
+    child.on('error', async (err) => {
+      const MAX_MSG_LEN = 64;
+      
+      let cmdStr = command;
+      const maxCmdLen = 15;
+      if (cmdStr.length > maxCmdLen) {
+        cmdStr = cmdStr.substring(0, maxCmdLen - 3) + '...';
+      }
+
+      const overhead = 10 + cmdStr.length;
+      const availableForErr = MAX_MSG_LEN - overhead;
+
+      let errStr = err.message;
+      if (errStr.length > availableForErr) {
+        const truncateLen = Math.max(0, availableForErr - 3);
+        errStr = errStr.substring(0, truncateLen) + '...';
+      }
+
+      const errorMessage = `Err: "${cmdStr}" (${errStr})`;
+      const target = `${SESSION_NAME}:0.0`;
+      await sendNotification(target, errorMessage);
+    });
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Command "${command}" started in the background (PID: ${child.pid}, CWD: ${process.cwd()}). I will notify you when it finishes.`, 
         },
       ],
     };
