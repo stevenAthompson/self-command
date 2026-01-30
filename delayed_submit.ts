@@ -24,7 +24,7 @@ async function main() {
 
   try {
     // 0. Ensure screen is stable BEFORE typing (Safety check)
-    await waitForStability(target, 30000, 1000, 300000);
+    await waitForStability(target, 10000, 1000, 300000);
 
     // 1. Reset state
     execSync(`tmux send-keys -t ${target} Escape`);
@@ -34,7 +34,7 @@ async function main() {
 
     // 2. Type the message
     for (const char of command) {
-      const escapedChar = char === "'" ? "'\\\'" : char;
+      const escapedChar = char === "'" ? "'\\''" : char;
       execSync(`tmux send-keys -t ${target} '${escapedChar}'`);
       await delay(20);
     }
@@ -45,8 +45,8 @@ async function main() {
 
     // 4. Monitor for completion
     // Wait for the command output to finish.
-    // CHANGED: 30 seconds of stability required to consider "complete".
-    await waitForStability(target, 30000, 1000, 600000); // 10 min timeout
+    // CHANGED: 10 seconds of stability required to consider "complete".
+    await waitForStability(target, 10000, 1000, 600000); // 10 min timeout
 
     // 5. Send notification
     await sendNotification(target, "[SYSTEM COMMAND] Command complete. Resume.");

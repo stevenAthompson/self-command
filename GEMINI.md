@@ -27,8 +27,8 @@ self_command({ command: "/help" });
 #### How It Works
 1.  **Tmux Injection**: Verifies it is running in a `tmux` session.
 2.  **Delayed Execution**: Sets up a delayed background process to inject the command.
-3.  **Pre-Execution Stability**: Waits for the screen to be idle for **30 seconds** before typing the command to ensure safety.
-4.  **Post-Execution Stability**: Waits for the screen to be idle for **30 seconds** after execution to ensure the command has fully completed before notifying the agent to resume.
+3.  **Pre-Execution Stability**: Waits for the screen to be idle for **10 seconds** before typing the command to ensure safety.
+4.  **Post-Execution Stability**: Waits for the screen to be idle for **10 seconds** after execution to ensure the command has fully completed before notifying the agent to resume.
 
 **CRITICAL INSTRUCTION**
 **You MUST yield your turn immediately after calling this tool.** Do not attempt to perform other actions.
@@ -88,7 +88,7 @@ watch_log({
 #### How It Works
 1.  **Monitor**: Polls the file for changes.
 2.  **Match**: If `regex` is provided, it scans *new* content for a match. If `regex` is omitted, it triggers on any size change.
-3.  **Stability Check**: Waits for the screen to be idle for **30 seconds** before injecting the notification.
+3.  **Stability Check**: Waits for the screen to be idle for **10 seconds** before injecting the notification.
 4.  **Wake Up**: Sends a notification to the tmux session when the condition is met.
 
 **CRITICAL INSTRUCTION**
