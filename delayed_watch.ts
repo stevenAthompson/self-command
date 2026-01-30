@@ -6,6 +6,12 @@
 
 import { SESSION_NAME, sendNotification } from './tmux_utils.js';
 import * as fs from 'fs';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PID_DIR = path.join(__dirname, 'pids');
 
 async function main() {
   const args = process.argv.slice(2);
@@ -29,6 +35,33 @@ async function main() {
 
   const target = `${SESSION_NAME}:0.0`;
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  // --- PID File Management ---
+  if (!fs.existsSync(PID_DIR)) {
+    try { fs.mkdirSync(PID_DIR, { recursive: true }); } catch (e) {}
+  }
+  
+  const pathHex = Buffer.from(filePath).toString('hex');
+  const pidFile = path.join(PID_DIR, `watch_${pathHex}_${process.pid}.pid`);
+
+  const cleanup = () => {
+    try {
+        if (fs.existsSync(pidFile)) {
+            fs.unlinkSync(pidFile);
+        }
+    } catch (e) {}
+  };
+
+  try {
+    fs.writeFileSync(pidFile, process.pid.toString());
+  } catch (e) {
+      // Proceed even if we can't write the PID file
+  }
+
+  process.on('exit', cleanup);
+  process.on('SIGINT', () => { cleanup(); process.exit(0); });
+  process.on('SIGTERM', () => { cleanup(); process.exit(0); });
+  // ---------------------------
 
   if (!fs.existsSync(filePath)) {
     // Fail if file doesn't exist

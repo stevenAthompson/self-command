@@ -13,7 +13,7 @@ import { fileURLToPath } from 'url';
 import * as fs from 'fs';
 
 // Import shared utilities
-import { isInsideTmuxSession, sendNotification, SESSION_NAME } from './tmux_utils.js';
+import { isInsideTmuxSession, sendNotification, SESSION_NAME, sendKeys, capturePane, splitWindow, killPane } from './tmux_utils.js';
 
 const server = new McpServer({
   name: 'self-command-server',
@@ -27,6 +27,9 @@ const SUBMIT_WORKER_SCRIPT = path.join(__dirname, 'delayed_submit.js');
 const YIELD_WORKER_SCRIPT = path.join(__dirname, 'instant_yield.js');
 const SLEEP_WORKER_SCRIPT = path.join(__dirname, 'delayed_sleep.js');
 const WATCH_WORKER_SCRIPT = path.join(__dirname, 'delayed_watch.js');
+const IDLE_WORKER_SCRIPT = path.join(__dirname, 'delayed_idle.js');
+
+const PID_DIR = path.join(__dirname, 'pids');
 
 /**
  * Generates a unique ID for request tracking.
@@ -35,6 +38,45 @@ const WATCH_WORKER_SCRIPT = path.join(__dirname, 'delayed_watch.js');
 function getNextId(): string {
   return Math.random().toString(36).substring(2, 6).toUpperCase();
 }
+
+server.registerTool(
+  'wait_for_idle',
+  {
+    description: 'Waits for the system CPU usage to drop below a threshold for a specified duration.',
+    inputSchema: z.object({
+      cpu_threshold: z.number().positive().max(100).describe('CPU usage percentage threshold (e.g. 10 for 10%).'),
+      duration_seconds: z.number().positive().describe('Number of seconds the CPU must remain below the threshold.'),
+    }),
+  },
+  async ({ cpu_threshold, duration_seconds }) => {
+    if (!isInsideTmuxSession()) {
+      return {
+        content: [{ type: 'text', text: `Error: Not running inside tmux session '${SESSION_NAME}'.` }],
+        isError: true,
+      };
+    }
+
+    const id = getNextId();
+
+    try {
+      const subprocess = spawn(process.execPath, [IDLE_WORKER_SCRIPT, cpu_threshold.toString(), duration_seconds.toString(), id], {
+        detached: true,
+        stdio: 'ignore',
+        cwd: __dirname
+      });
+      subprocess.unref();
+    } catch (err) {
+      return {
+        content: [{ type: 'text', text: `Failed to schedule idle watch [${id}]: ${err}` }],
+        isError: true,
+      };
+    }
+
+    return {
+      content: [{ type: 'text', text: `Idle monitor [${id}] started. Waiting for CPU < ${cpu_threshold}% for ${duration_seconds}s.` }],
+    };
+  },
+);
 
 server.registerTool(
   'self_command',
@@ -91,6 +133,137 @@ server.registerTool(
         },
       ],
     };
+  },
+);
+
+server.registerTool(
+  'send_keys',
+  {
+    description: 'Sends keystrokes to a specific tmux pane. Useful for interacting with TUI apps, confirming prompts, or sending control signals (like C-c).',
+    inputSchema: z.object({
+      keys: z.string().describe('The keys to send. Use "C-c" for Ctrl+C, "Enter" for return, "Up" for arrow keys.'),
+      pane_id: z.string().optional().describe('The target pane ID (e.g. "%1"). If omitted, defaults to the current active pane (careful!).'),
+    }),
+  },
+  async ({ keys, pane_id }) => {
+    if (!isInsideTmuxSession()) {
+      return {
+        content: [{ type: 'text', text: `Error: Not running inside tmux session '${SESSION_NAME}'.` }],
+        isError: true,
+      };
+    }
+
+    // Default to current pane if not specified, but be careful.
+    // However, if we are running as the agent, "current pane" is the agent's pane.
+    // Sending keys to self is okay if that's the intent, but usually we want a target.
+    const target = pane_id || `${SESSION_NAME}:0.0`; // Default to the main pane if unsure, or maybe allow omitted?
+    // Actually, tmux defaults to current if -t is omitted, but we enforce it in utils.
+    
+    try {
+        sendKeys(target, keys);
+        return {
+            content: [{ type: 'text', text: `Sent keys "${keys}" to pane ${target}.` }],
+        };
+    } catch (err) {
+        return {
+            content: [{ type: 'text', text: `Failed to send keys: ${err}` }],
+            isError: true,
+        };
+    }
+  },
+);
+
+server.registerTool(
+  'capture_pane',
+  {
+    description: 'Captures the visible text content of a tmux pane. Useful for checking the status of TUI apps or reading output.',
+    inputSchema: z.object({
+      pane_id: z.string().optional().describe('The target pane ID. If omitted, captures the current pane.'),
+      lines: z.number().int().positive().optional().describe('Number of lines to capture from the bottom history. If omitted, captures the visible screen.'),
+    }),
+  },
+  async ({ pane_id, lines }) => {
+    if (!isInsideTmuxSession()) {
+      return {
+        content: [{ type: 'text', text: `Error: Not running inside tmux session '${SESSION_NAME}'.` }],
+        isError: true,
+      };
+    }
+
+    const target = pane_id || `${SESSION_NAME}:0.0`;
+
+    try {
+        const content = capturePane(target, lines);
+        return {
+            content: [{ type: 'text', text: content }],
+        };
+    } catch (err) {
+        return {
+            content: [{ type: 'text', text: `Failed to capture pane: ${err}` }],
+            isError: true,
+        };
+    }
+  },
+);
+
+server.registerTool(
+  'create_pane',
+  {
+    description: 'Splits the current window to create a new pane and optionally runs a command in it.',
+    inputSchema: z.object({
+      command: z.string().optional().describe('The command to run in the new pane.'),
+      direction: z.enum(['vertical', 'horizontal']).optional().describe('Split direction. "vertical" (top/bottom) or "horizontal" (left/right). Defaults to vertical.'),
+    }),
+  },
+  async ({ command, direction }) => {
+    if (!isInsideTmuxSession()) {
+      return {
+        content: [{ type: 'text', text: `Error: Not running inside tmux session '${SESSION_NAME}'.` }],
+        isError: true,
+      };
+    }
+
+    try {
+        const paneId = splitWindow(command, direction);
+        return {
+            content: [{ type: 'text', text: `Created new pane ${paneId}${command ? ` running "${command}"` : ''}.` }],
+        };
+    } catch (err) {
+        return {
+            content: [{ type: 'text', text: `Failed to create pane: ${err}` }],
+            isError: true,
+        };
+    }
+  },
+);
+
+server.registerTool(
+  'close_pane',
+  {
+    description: 'Closes a specific tmux pane.',
+    inputSchema: z.object({
+      pane_id: z.string().describe('The ID of the pane to close (e.g. "%1").'),
+    }),
+  },
+  async ({ pane_id }) => {
+    if (!isInsideTmuxSession()) {
+      return {
+        content: [{ type: 'text', text: `Error: Not running inside tmux session '${SESSION_NAME}'.` }],
+        isError: true,
+      };
+    }
+
+    try {
+        killPane(pane_id);
+        return {
+            content: [{ type: 'text', text: `Closed pane ${pane_id}.` }],
+        };
+    } catch (err) {
+        return {
+            content: [{ type: 'text', text: `Failed to close pane: ${err}` }],
+            isError: true,
+        };
+    }
   },
 );
 
@@ -275,6 +448,7 @@ server.registerTool(
        };
     }
 
+    const resolvedPath = path.resolve(file_path);
     const id = getNextId();
     // Default wake_on_change to true if regex is not provided
     const effectiveWakeOnChange = wake_on_change ?? (regex === undefined);
@@ -282,7 +456,7 @@ server.registerTool(
     const timeout = timeout_sec || 3600;
 
     try {
-      const subprocess = spawn(process.execPath, [WATCH_WORKER_SCRIPT, file_path, encodedRegex, effectiveWakeOnChange.toString(), timeout.toString(), id], {
+      const subprocess = spawn(process.execPath, [WATCH_WORKER_SCRIPT, resolvedPath, encodedRegex, effectiveWakeOnChange.toString(), timeout.toString(), id], {
         detached: true,
         stdio: 'ignore',
         cwd: __dirname
@@ -296,7 +470,7 @@ server.registerTool(
     }
 
     return {
-      content: [{ type: 'text', text: `Log monitor background task [${id}] started for ${file_path} (Timeout: ${timeout}s). Will notify upon match/change.` }],
+      content: [{ type: 'text', text: `Log monitor background task [${id}] started for ${resolvedPath} (Timeout: ${timeout}s). Will notify upon match/change.` }],
     };
   },
 );
@@ -311,31 +485,63 @@ server.registerTool(
   },
   async ({ file_path }) => {
     try {
-      const args = ['-f'];
-      if (file_path) {
-        // Match specific file path argument
-        args.push(`delayed_watch.js ${file_path}`);
-      } else {
-        args.push('delayed_watch.js');
+      if (!fs.existsSync(PID_DIR)) {
+         return { content: [{ type: 'text', text: `No active watchers found.` }] };
       }
-      
-      const result = spawnSync('pkill', args);
-      
-      if (result.status === 0) {
-         return {
-          content: [{ type: 'text', text: `Successfully cancelled watcher(s)${file_path ? ' for ' + file_path : ''}.` }],
-        };
-      } else if (result.status === 1) {
-         // pkill returns 1 if no processes matched
-         return {
-            content: [{ type: 'text', text: `No active watchers found${file_path ? ' for ' + file_path : ''}.` }],
-         };
-      } else {
-         throw new Error(`pkill failed with status ${result.status}: ${result.stderr.toString()}`);
+
+      const files = fs.readdirSync(PID_DIR);
+      let cancelledCount = 0;
+      let errors: string[] = [];
+
+      // If file_path is provided, calculate its hex signature from resolved path
+      const targetHex = file_path ? Buffer.from(path.resolve(file_path)).toString('hex') : null;
+
+      for (const file of files) {
+          // Check if it looks like our pid file: watch_<hex>_<pid>.pid
+          const match = file.match(/^watch_([0-9a-f]+)_(\d+)\.pid$/);
+          if (!match) continue;
+
+          const [_, hex, pidStr] = match;
+          
+          // Filter by path if requested
+          if (targetHex && hex !== targetHex) continue;
+
+          const pid = parseInt(pidStr, 10);
+
+          try {
+              // Check if process exists (signal 0)
+              process.kill(pid, 0);
+              
+              // Kill it with SIGTERM (delayed_watch handles this and cleans up)
+              process.kill(pid, 'SIGTERM');
+              cancelledCount++;
+              
+              // Give it a tiny moment to clean up? No, proceed. 
+              // We'll optimistically unlink the file to ensure the list is clean, 
+              // knowing the process tries to unlink it too. Race condition is harmless here (ENOENT).
+              try { fs.unlinkSync(path.join(PID_DIR, file)); } catch (e) {}
+
+          } catch (e: any) {
+              // ESRCH means process doesn't exist (stale pid file)
+              if (e.code === 'ESRCH') {
+                  // Clean up stale file
+                  try { fs.unlinkSync(path.join(PID_DIR, file)); } catch (e) {}
+              } else {
+                  errors.push(e.message || String(e));
+              }
+          }
       }
-    } catch (err) {
+
+      if (cancelledCount > 0) {
+          return { content: [{ type: 'text', text: `Successfully cancelled ${cancelledCount} watcher(s)${file_path ? ' for ' + file_path : ''}.` }] };
+      } else if (errors.length > 0) {
+          return { content: [{ type: 'text', text: `Failed to cancel some watchers: ${errors.join(', ')}` }], isError: true };
+      } else {
+          return { content: [{ type: 'text', text: `No active watchers found${file_path ? ' for ' + file_path : ''}.` }] };
+      }
+    } catch (err: any) {
        return {
-        content: [{ type: 'text', text: `Failed to cancel watchers: ${err}` }],
+        content: [{ type: 'text', text: `Failed to cancel watchers: ${err.message || String(err)}` }],
         isError: true,
       };
     }

@@ -39,6 +39,21 @@ The Gemini agent is not naturally "aware" of background processes or tmux-style 
 ### run_long_command
 Executes a long-running shell command in the background without blocking the agent. It notifies Gemini upon completion (success or failure) by injecting a message into the tmux session. Returns a unique Request ID.
 
+### send_keys
+Sends keystrokes to a specific tmux pane. Useful for interacting with TUI apps, confirming prompts (e.g., 'y/n'), or sending control signals like `Ctrl-C`.
+
+### capture_pane
+Captures the visible text content of a tmux pane. Useful for checking the status of TUI apps or reading output from a pane that isn't the main agent pane.
+
+### create_pane
+Splits the current window to create a new pane and optionally runs a command in it. Useful for running parallel tasks like servers or watchers while keeping the main terminal free.
+
+### close_pane
+Closes a specific tmux pane. Used to clean up panes created by `create_pane`.
+
+### wait_for_idle
+Waits for the system CPU usage to drop below a specified threshold for a set duration. Useful for waiting for resource-intensive tasks (like compilation) to finish when there is no specific log message to watch.
+
 ## Prerequisites
 
 -   **Tmux:** You must run the Gemini CLI inside a tmux session named `gemini-cli`.

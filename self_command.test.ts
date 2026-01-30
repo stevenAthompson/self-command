@@ -24,13 +24,25 @@ const mocks = vi.hoisted(() => ({
   connect: vi.fn(),
   spawn: vi.fn(), // We will configure the return value in tests
   existsSync: vi.fn().mockReturnValue(true),
+  openSync: vi.fn(),
+  closeSync: vi.fn(),
+  unlinkSync: vi.fn(),
+  writeFileSync: vi.fn(),
 }));
 
 vi.mock('fs', () => ({
   default: {
     existsSync: mocks.existsSync,
+    openSync: mocks.openSync,
+    closeSync: mocks.closeSync,
+    unlinkSync: mocks.unlinkSync,
+    writeFileSync: mocks.writeFileSync,
   },
   existsSync: mocks.existsSync,
+  openSync: mocks.openSync,
+  closeSync: mocks.closeSync,
+  unlinkSync: mocks.unlinkSync,
+  writeFileSync: mocks.writeFileSync,
 }));
 
 vi.mock('@modelcontextprotocol/sdk/server/mcp.js', () => ({
@@ -204,7 +216,8 @@ describe('self_command MCP Server', () => {
 
     const result = await watchLogFn({ file_path: '/tmp/log.txt' });
 
-    expect(result.content[0].text).toContain('Log monitor background task started');
+    expect(result.content[0].text).toContain('Log monitor background task');
+    expect(result.content[0].text).toContain('started for /tmp/log.txt');
 
     expect(mocks.spawn).toHaveBeenCalledWith(
         process.execPath,

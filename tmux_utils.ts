@@ -104,3 +104,72 @@ export async function sendNotification(target: string, message: string) {
         }
     });
 }
+
+/**
+ * Sends keys to a specific tmux target.
+ * @param target The tmux target (e.g. "session:0.0", "%1").
+ * @param keys The keys string to send.
+ */
+export function sendKeys(target: string, keys: string) {
+    // Escape single quotes in the keys string to prevent shell injection/breaking
+    const escapedKeys = keys.replace(/'/g, "'\\''");
+    execSync(`tmux send-keys -t ${target} '${escapedKeys}'`);
+}
+
+/**
+ * Captures the content of a tmux pane.
+ * @param target The tmux target.
+ * @param lines Optional: Number of lines to capture (from the bottom).
+ * @returns {string} The captured text.
+ */
+export function capturePane(target: string, lines?: number): string {
+    const args = ['capture-pane', '-p', '-t', target];
+    if (lines) {
+        args.push('-S', `-${lines}`);
+    }
+    // execSync returns a Buffer, we decode it.
+    // Use spawnSync here to handle arguments safer than template literal for execSync
+    // Actually, execSync is fine if we are careful, but let's stick to the pattern or just execSync with escaping if simple.
+    // Given the simplicity, direct execSync with careful construction is okay, but `child_process.execSync` takes a command string.
+    // Let's use the existing execSync import but construct the command carefully.
+    
+    // For capture-pane, arguments are flags.
+    let cmd = `tmux capture-pane -p -t ${target}`;
+    if (lines) {
+        cmd += ` -S -${lines}`;
+    }
+    return execSync(cmd, { encoding: 'utf-8' });
+}
+
+/**
+ * Splits the window and optionally runs a command.
+ * @param command Optional command to run in the new pane.
+ * @param direction 'vertical' (split top/bottom) or 'horizontal' (split left/right). Default is vertical.
+ * @returns {string} The ID of the new pane (e.g. "%2").
+ */
+export function splitWindow(command?: string, direction: 'vertical' | 'horizontal' = 'vertical'): string {
+    let cmd = 'tmux split-window -P -F "#{pane_id}"';
+    if (direction === 'horizontal') {
+        cmd += ' -h';
+    } else {
+        cmd += ' -v';
+    }
+    
+    if (command) {
+        // We need to pass the command as an argument. 
+        // We'll wrap it in single quotes and escape existing single quotes.
+        const escapedCommand = command.replace(/'/g, "'\\''");
+        cmd += ` '${escapedCommand}'`;
+    }
+
+    const paneId = execSync(cmd, { encoding: 'utf-8' }).trim();
+    return paneId;
+}
+
+/**
+ * Kills a specific tmux pane.
+ * @param target The tmux target (e.g. "%1").
+ */
+export function killPane(target: string) {
+    execSync(`tmux kill-pane -t ${target}`);
+}
