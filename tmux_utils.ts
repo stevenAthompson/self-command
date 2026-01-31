@@ -76,33 +76,42 @@ export async function waitForStability(target: string, stableDurationMs: number 
  * Serialized via file lock to prevent garbled output.
  */
 export async function sendNotification(target: string, message: string) {
-    await FileLock.withLock('gemini-tmux-notification', async () => {
-        const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-        
-        // Ensure stability before notifying (don't interrupt typing)
-        await waitForStability(target, 10000, 1000, 300000);
-
-        // Clear input
+    // Use a longer timeout (10 minutes) for the lock to accommodate waitForStability
+    const lock = new FileLock('gemini-tmux-notification', 500, 1200); 
+    
+    if (await lock.acquire()) {
         try {
-            execSync(`tmux send-keys -t ${target} Escape`);
-            await delay(100);
-            execSync(`tmux send-keys -t ${target} C-u`);
-            await delay(200);
+            const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+            
+            // Ensure stability before notifying (don't interrupt typing)
+            await waitForStability(target, 10000, 1000, 300000);
 
-            for (const char of message) {
-                const escapedChar = char === "'" ? "'\\''" : char;
-                execSync(`tmux send-keys -t ${target} '${escapedChar}'`);
-                await delay(20);
+            // Clear input
+            try {
+                execSync(`tmux send-keys -t ${target} Escape`);
+                await delay(100);
+                execSync(`tmux send-keys -t ${target} C-u`);
+                await delay(200);
+
+                for (const char of message) {
+                    const escapedChar = char === "'" ? "'\\''" : char;
+                    execSync(`tmux send-keys -t ${target} '${escapedChar}'`);
+                    await delay(20);
+                }
+                await delay(500);
+                execSync(`tmux send-keys -t ${target} Enter`);
+                await delay(500);
+                execSync(`tmux send-keys -t ${target} Enter`);
+            } catch (e) {
+                // Ignore errors if tmux is gone
+                console.error(`Failed to notify Gemini via tmux: ${e}`);
             }
-            await delay(500);
-            execSync(`tmux send-keys -t ${target} Enter`);
-            await delay(500);
-            execSync(`tmux send-keys -t ${target} Enter`);
-        } catch (e) {
-            // Ignore errors if tmux is gone
-            console.error(`Failed to notify Gemini via tmux: ${e}`);
+        } finally {
+            lock.release();
         }
-    });
+    } else {
+        console.error('Failed to acquire lock for notification (timeout).');
+    }
 }
 
 /**

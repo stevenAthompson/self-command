@@ -320,58 +320,68 @@ server.registerTool(
 
     // Set up completion handler
     child.on('close', async (code) => {
-      const duration = Date.now() - startTime;
-      const MAX_MSG_LEN = 64;
-      const codeStr = `(${code})`;
-      
-      // Truncate command
-      let cmdStr = command;
-      const maxCmdLen = 15;
-      if (cmdStr.length > maxCmdLen) {
-        cmdStr = cmdStr.substring(0, maxCmdLen - 3) + '...';
-      }
+      try {
+        const duration = Date.now() - startTime;
+        const MAX_MSG_LEN = 64;
+        const codeStr = `(${code})`;
+        
+        // Truncate command
+        let cmdStr = command;
+        const maxCmdLen = 15;
+        if (cmdStr.length > maxCmdLen) {
+          cmdStr = cmdStr.substring(0, maxCmdLen - 3) + '...';
+        }
 
-      // Calculate available space for output
-      const overhead = 22 + cmdStr.length + codeStr.length; // Extra 5 for ID
-      const availableForOut = MAX_MSG_LEN - overhead;
-      
-      let outStr = output ? output.replace(/[\r\n]+/g, ' ').trim() : '';
-      if (outStr.length > availableForOut) {
-        const truncateLen = Math.max(0, availableForOut - 3);
-        outStr = outStr.substring(0, truncateLen) + '...';
-      }
+        // Calculate available space for output
+        const overhead = 22 + cmdStr.length + codeStr.length; // Extra 5 for ID
+        const availableForOut = MAX_MSG_LEN - overhead;
+        
+        let outStr = output ? output.replace(/[\r\n]+/g, ' ').trim() : '';
+        if (outStr.length > availableForOut) {
+          const truncateLen = Math.max(0, availableForOut - 3);
+          outStr = outStr.substring(0, truncateLen) + '...';
+        }
 
-      let completionMessage = `[${id}] Cmd: "${cmdStr}" ${codeStr} Out: [${outStr}]`;
-      
-      if (duration < 1000) {
-        completionMessage += " (Warn: Instant Exit)";
-      }
+        let completionMessage = `[${id}] Cmd: "${cmdStr}" ${codeStr} Out: [${outStr}]`;
+        
+        if (duration < 1000) {
+          completionMessage += " (Warn: Instant Exit)";
+        }
 
-      const target = `${SESSION_NAME}:0.0`;
-      await sendNotification(target, completionMessage);
+        const target = `${SESSION_NAME}:0.0`;
+        await sendNotification(target, completionMessage);
+      } catch (err) {
+        // Prevent server crash on notification failure
+        console.error(`Failed to send completion notification for [${id}]:`, err);
+      }
     });
 
     child.on('error', async (err) => {
-      const MAX_MSG_LEN = 64;
-      
-      let cmdStr = command;
-      const maxCmdLen = 15;
-      if (cmdStr.length > maxCmdLen) {
-        cmdStr = cmdStr.substring(0, maxCmdLen - 3) + '...';
+      try {
+        const MAX_MSG_LEN = 64;
+        
+        let cmdStr = command;
+        const maxCmdLen = 15;
+        if (cmdStr.length > maxCmdLen) {
+          cmdStr = cmdStr.substring(0, maxCmdLen - 3) + '...';
+        }
+
+        const overhead = 15 + cmdStr.length; // Extra 5 for ID
+        const availableForErr = MAX_MSG_LEN - overhead;
+
+        let errStr = err.message;
+        if (errStr.length > availableForErr) {
+          const truncateLen = Math.max(0, availableForErr - 3);
+          errStr = errStr.substring(0, truncateLen) + '...';
+        }
+
+        const errorMessage = `[${id}] Err: "${cmdStr}" (${errStr})`;
+        const target = `${SESSION_NAME}:0.0`;
+        await sendNotification(target, errorMessage);
+      } catch (notifyErr) {
+        // Prevent server crash on notification failure
+        console.error(`Failed to send error notification for [${id}]:`, notifyErr);
       }
-
-      const overhead = 15 + cmdStr.length; // Extra 5 for ID
-      const availableForErr = MAX_MSG_LEN - overhead;
-
-      let errStr = err.message;
-      if (errStr.length > availableForErr) {
-        const truncateLen = Math.max(0, availableForErr - 3);
-        errStr = errStr.substring(0, truncateLen) + '...';
-      }
-
-      const errorMessage = `[${id}] Err: "${cmdStr}" (${errStr})`;
-      const target = `${SESSION_NAME}:0.0`;
-      await sendNotification(target, errorMessage);
     });
 
     return {
