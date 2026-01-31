@@ -6,6 +6,7 @@
 
 import { execSync } from 'child_process';
 import { SESSION_NAME, waitForStability, sendNotification } from './tmux_utils.js';
+import { FileLock } from './file_lock.js';
 
 async function main() {
   const args = process.argv.slice(2);
@@ -17,13 +18,20 @@ async function main() {
   const command = Buffer.from(encodedCommand, 'base64').toString('utf-8');
   const id = args[1] || '????';
 
-  const target = `${SESSION_NAME}:0.0`;
-  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  const lock = new FileLock('gemini_tmux_input', 500, 1200); // Wait up to 10 minutes
 
-  // Initial wait to allow immediate churn to settle
-  await delay(1000);
+  if (!await lock.acquire()) {
+    // Failed to acquire lock
+    process.exit(1);
+  }
 
   try {
+    const target = `${SESSION_NAME}:0.0`;
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+    // Initial wait to allow immediate churn to settle
+    await delay(1000);
+
     // 0. Ensure screen is stable BEFORE typing (Safety check)
     await waitForStability(target, 10000, 1000, 300000);
 
@@ -54,6 +62,8 @@ async function main() {
     
   } catch (error) {
     process.exit(1);
+  } finally {
+    lock.release();
   }
 }
 
