@@ -50,8 +50,14 @@ export async function waitForStability(target: string, stableDurationMs: number 
         
         let currentContent = '';
         try {
-            // Capture the full pane to detect any changes
-            currentContent = execSync(`tmux capture-pane -p -t ${target}`, { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] });
+            // Capture the full pane content
+            const textContent = execSync(`tmux capture-pane -p -t ${target}`, { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] });
+            
+            // Capture cursor position to detect movement (which text capture misses)
+            const cursorPosition = execSync(`tmux display-message -p -t ${target} "#{cursor_x},#{cursor_y}"`, { encoding: 'utf-8' }).trim();
+            
+            // Combine both for the stability signature
+            currentContent = `${textContent}\n__CURSOR__:${cursorPosition}`;
         } catch (e) {
             continue;
         }
