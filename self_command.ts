@@ -398,12 +398,13 @@ server.registerTool(
 server.registerTool(
   'gemini_sleep',
   {
-    description: 'Sleeps for a specified number of seconds and then sends a tmux message to wake the system up. Useful for waiting for long-running background tasks.',
+    description: 'Sleeps for a specified number of seconds and then sends a tmux message to wake the system up. Useful for waiting for long-running background tasks. Enforces a single active sleep policy (shorter duration wins).',
     inputSchema: z.object({
-      seconds: z.number().positive().describe('Number of seconds to sleep.'),
+      seconds: z.number().positive().describe('Number of seconds to sleep (or interval if recurring).'),
+      recurring: z.boolean().optional().describe('If true, wakes up every X seconds. Minimum 3600s (1 hour) for recurring sleep. Defaults to false.'),
     }),
   },
-  async ({ seconds }) => {
+  async ({ seconds, recurring }) => {
     if (!isInsideTmuxSession()) {
       return {
         content: [{ type: 'text', text: `Error: Not running inside tmux session '${SESSION_NAME}'.` }],
@@ -411,14 +412,84 @@ server.registerTool(
       };
     }
 
+    if (recurring && seconds < 3600) {
+      return {
+        content: [{ type: 'text', text: `Error: Recurring sleep requires a minimum interval of 3600 seconds (1 hour). Requested: ${seconds}s.` }],
+        isError: true,
+      };
+    }
+
+    // Ensure PID_DIR exists
+    if (!fs.existsSync(PID_DIR)) {
+      fs.mkdirSync(PID_DIR, { recursive: true });
+    }
+
+    const stateFile = path.join(PID_DIR, 'active_sleep.json');
+    let activeSleep: { pid: number; wakeTime: number; recurring: boolean; interval: number } | null = null;
+
+    // Check for existing active sleep
+    if (fs.existsSync(stateFile)) {
+      try {
+        const state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+        // Check if process is actually alive
+        try {
+          process.kill(state.pid, 0);
+          activeSleep = state;
+        } catch (e) {
+          // Process dead, clean up file
+          fs.unlinkSync(stateFile);
+        }
+      } catch (e) {
+        // Corrupt file, ignore/delete
+        try { fs.unlinkSync(stateFile); } catch (e2) {}
+      }
+    }
+
+    const now = Date.now();
+    const newWakeTime = now + (seconds * 1000);
+
+    if (activeSleep) {
+      const remainingExisting = activeSleep.wakeTime - now;
+      const remainingNew = seconds * 1000;
+
+      // "Choose the shorter of the two"
+      if (remainingNew < remainingExisting) {
+        // New sleep is shorter, replace the old one
+        try {
+          process.kill(activeSleep.pid, 'SIGTERM');
+        } catch (e) {
+          // Ignore if already gone
+        }
+        // Proceed to start new one below
+      } else {
+        // Existing sleep is shorter (or equal), keep it
+        const remainingSec = Math.ceil(remainingExisting / 1000);
+        return {
+          content: [{ 
+            type: 'text', 
+            text: `Ignoring request for ${seconds}s sleep${recurring ? ' (recurring)' : ''}. An existing ${activeSleep.recurring ? 'recurring ' : ''}sleep is active and ends sooner (in ~${remainingSec}s).` 
+          }],
+        };
+      }
+    }
+
     const id = getNextId();
     try {
-      const subprocess = spawn(process.execPath, [SLEEP_WORKER_SCRIPT, seconds.toString(), id], {
+      const subprocess = spawn(process.execPath, [SLEEP_WORKER_SCRIPT, seconds.toString(), id, (!!recurring).toString(), stateFile], {
         detached: true,
         stdio: 'ignore',
         cwd: __dirname
       });
       subprocess.unref();
+
+      // Write state file
+      fs.writeFileSync(stateFile, JSON.stringify({
+        pid: subprocess.pid,
+        wakeTime: newWakeTime,
+        recurring: !!recurring,
+        interval: seconds
+      }));
+
     } catch (err) {
       return {
         content: [{ type: 'text', text: `Failed to schedule sleep [${id}]: ${err}` }],
@@ -427,7 +498,7 @@ server.registerTool(
     }
 
     return {
-      content: [{ type: 'text', text: `Sleep background task [${id}] started. Will sleep for ${seconds} seconds and notify upon completion.` }],
+      content: [{ type: 'text', text: `Sleep background task [${id}] started. Will sleep for ${seconds} seconds${recurring ? ' (recurring)' : ''} and notify upon completion.${activeSleep ? ' (Replaced previous longer sleep)' : ''}` }],
     };
   },
 );

@@ -39,10 +39,20 @@ Sleeps for a specified duration and then sends a wake-up notification.
 #### Usage
 Use this tool to pause execution while waiting for a task that you know will take a specific amount of time.
 
+**Single Active Sleep Policy:**
+Only ONE sleep task can be active at a time. If you request a new sleep while one is already running, the system will **choose the shorter duration**:
+- If the new sleep ends *sooner* than the current one, the current sleep is cancelled and replaced by the new, shorter one.
+- If the new sleep ends *later*, the request is ignored, and the existing shorter sleep continues.
+
+**Recurring Sleep:**
+You can set `recurring: true` to be woken up periodically (e.g., for monitoring).
+- **Constraint:** Recurring sleep requires a minimum interval of **3600 seconds (1 hour)**.
+
 **Tool Signature**
 ```typescript
 gemini_sleep({
-  seconds: number; // Number of seconds to sleep.
+  seconds: number; // Number of seconds to sleep (or interval if recurring).
+  recurring?: boolean; // Optional: If true, wakes repeatedly. Min 3600s.
 });
 ```
 

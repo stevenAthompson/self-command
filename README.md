@@ -21,6 +21,9 @@ Sends a command to the Gemini CLI. It waits for the session to stabilize after t
 
 ### gemini_sleep
 Sleeps for a specified number of seconds and then sends a wake-up notification to the tmux session. Returns a unique Request ID.
+**Features:**
+- **Recurring Sleep:** Can be set to wake up periodically (min 1 hour interval).
+- **Single Active Sleep:** Enforces a single active sleep policy. If a new sleep is requested, the system keeps the one that ends sooner and cancels the other.
 
 ### watch_log
 Monitors a log file and wakes the system up when the file changes or when new content matches a provided regex pattern. Supports a configurable timeout. Returns a unique Request ID.
