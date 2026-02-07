@@ -109,7 +109,7 @@ server.registerTool('self_command', {
         content: [
             {
                 type: 'text',
-                text: `Background task [${id}] started. Will execute "${command}" in ~3 seconds and notify upon completion.`,
+                text: `Background task [${id}] queued. Will execute "${command}" in ~3 seconds. Wait for completion signal.`,
             },
         ],
     };
