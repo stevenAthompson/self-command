@@ -45,7 +45,8 @@ async function main() {
         // CHANGED: 10 seconds of stability required to consider "complete".
         await waitForStability(target, 10000, 1000, 600000); // 10 min timeout
         // 5. Send notification
-        await sendNotification(target, `[${id}] Command complete. Resume.`);
+        // We skip the stability check inside sendNotification because we JUST verified it above.
+        await sendNotification(target, `[${id}] Self Command Complete`, true);
     }
     catch (error) {
         process.exit(1);

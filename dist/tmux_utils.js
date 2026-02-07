@@ -70,15 +70,20 @@ export async function waitForStability(target, stableDurationMs = 10000, polling
  * Sends a notification to the tmux pane.
  * Safely waits for a brief moment of stability before typing to avoid interruption.
  * Serialized via file lock to prevent garbled output.
+ * @param target The tmux target.
+ * @param message The message to send.
+ * @param skipStabilityCheck If true, skips the stability check. Use only if caller just verified stability.
  */
-export async function sendNotification(target, message) {
+export async function sendNotification(target, message, skipStabilityCheck = false) {
     // Use a longer timeout (10 minutes) for the lock to accommodate waitForStability
     const lock = new FileLock('gemini-tmux-notification', 500, 1200);
     if (await lock.acquire()) {
         try {
             const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
             // Ensure stability before notifying (don't interrupt typing)
-            await waitForStability(target, 10000, 1000, 300000);
+            if (!skipStabilityCheck) {
+                await waitForStability(target, 10000, 1000, 300000);
+            }
             // Clear input
             try {
                 execSync(`tmux send-keys -t ${target} Escape`);
