@@ -97,8 +97,6 @@ export async function sendNotification(target, message, skipStabilityCheck = fal
                 }
                 await delay(500);
                 execSync(`tmux send-keys -t ${target} Enter`);
-                await delay(500);
-                execSync(`tmux send-keys -t ${target} Enter`);
             }
             catch (e) {
                 // Ignore errors if tmux is gone

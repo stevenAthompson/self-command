@@ -65,6 +65,7 @@ async function main() {
     process.exit(1);
   } finally {
     lock.release();
+    process.exit(0);
   }
 }
 

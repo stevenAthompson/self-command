@@ -53,6 +53,7 @@ async function main() {
     }
     finally {
         lock.release();
+        process.exit(0);
     }
 }
 main();
