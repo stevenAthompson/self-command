@@ -33,7 +33,8 @@ async function main() {
     await delay(1000);
 
     // 0. Ensure screen is stable BEFORE typing (Safety check)
-    await waitForStability(target, 10000, 1000, 300000);
+    // Reduced to 5s to be more responsive but still safe.
+    await waitForStability(target, 5000, 1000, 300000);
 
     // 1. Reset state
     execSync(`tmux send-keys -t ${target} Escape`);
@@ -54,17 +55,21 @@ async function main() {
 
     // 4. Monitor for completion
     // Wait for the command output to finish.
-    // CHANGED: 10 seconds of stability required to consider "complete".
-    await waitForStability(target, 10000, 1000, 600000); // 10 min timeout
+    // Reduced to 2s stability to allow faster feedback.
+    await waitForStability(target, 2000, 500, 60000); 
 
     // 5. Send notification
-    // We skip the stability check inside sendNotification because we JUST verified it above.
     await sendNotification(target, `[${id}] Self Command Complete`, true);
     
-  } catch (error) {
+  } catch (error: any) {
+    const fs = await import('fs');
+    const path = await import('path');
+    const logFile = path.join(path.dirname(process.argv[1]), 'delayed_submit_error.log');
+    fs.appendFileSync(logFile, `[${new Date().toISOString()}] Error in ${args[1]}: ${error?.message || error}\n`);
+    try { lock.release(); } catch (e) {}
     process.exit(1);
   } finally {
-    lock.release();
+    try { lock.release(); } catch (e) {}
     process.exit(0);
   }
 }
