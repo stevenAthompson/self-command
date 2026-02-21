@@ -41,6 +41,8 @@ async function main() {
         // 3. Submit
         await delay(500);
         execSync(`tmux send-keys -t ${target} Enter`);
+        await delay(500);
+        execSync(`tmux send-keys -t ${target} Enter`);
         // 4. Monitor for completion
         // Wait for the command output to finish.
         // Reduced to 2s stability to allow faster feedback.
